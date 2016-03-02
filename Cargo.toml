@@ -1,0 +1,12 @@
+[package]
+name = "rusteriser"
+version = "0.1.0"
+authors = ["Adam Wolski <miniukof@gmail.com>"]
+
+[dependencies]
+
+log = '*'
+env_logger = '*'
+clippy = '*'
+sdl2 = '*'
+tobj = "*"
