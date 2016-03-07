@@ -5,28 +5,44 @@
 extern crate log;
 extern crate env_logger;
 extern crate sdl2;
+extern crate tobj;
 
 pub mod window;
+pub mod line;
+pub mod backbuffer;
+pub mod model;
+
+// Here be globals
+const WINDOW_WIDTH: u32 = 12;
+const WINDOW_HEIGHT: u32 = 12;
+// -------------------------
 
 
-const WINDOW_WIDTH: u32 = 16;
-const WINDOW_HEIGHT: u32 = 16;
+/// Simple color structure.
+#[derive(Clone, Copy)]
+struct RGBA {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+}
+
 
 fn main() {
     env_logger::init().unwrap();
+
     let mut window = window::Window::new("Rusteriser", WINDOW_WIDTH, WINDOW_HEIGHT);
+    let mut backbuffer = backbuffer::Backbuffer::new(WINDOW_WIDTH as usize, WINDOW_HEIGHT as usize);
 
-    let mut backbuffer: Vec<u8> = Vec::with_capacity((WINDOW_WIDTH * WINDOW_HEIGHT * 4) as usize);
-
-    for _ in (0..backbuffer.capacity()).filter(|i| i % 4 == 0) {
-        backbuffer.push(0); // B
-        backbuffer.push(0); // G
-        backbuffer.push(255); // R
-        backbuffer.push(0); // A
+    for point in line::Line::new(0, 0, 10, 10) {
+        debug!("{:?}", point);
+        backbuffer.set_loc((point.0 as usize, point.1 as usize), (255, 255, 255, 255));
     }
 
+    debug!("{:#?}", backbuffer);
+
     while window.is_running() {
-        window.backbuffer_fill(backbuffer.as_ref());
+        window.backbuffer_fill(backbuffer.data_as_ref());
         window.swap();
     }
 }
