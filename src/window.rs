@@ -27,25 +27,29 @@ impl<'a> Window<'a> {
                                                 width,
                                                 height)
                          .unwrap();
+        // Backbuffer has the same amount of pixels as window, though we store data as u8 for
+        // better compatibility with sdl_texture so we multiply that by 4 to get ARGB8 format.
+        let mut backbuffer: Vec<u8> = Vec::with_capacity((width * height * 4) as usize);
+        // Initialize backbuffer with black color
+        for _ in 0..backbuffer.capacity() {
+            backbuffer.push(0);
+        }
         Window {
             context: context,
             renderer: renderer,
             buffer_texture: bt,
             width: width,
-            // Backbuffer has the same amount of pixels as window, though we store data as u8 for
-            // better compatibility with sdl_texture so we multiply that by 4 to get ARGB8 format.
-            backbuffer: Vec::with_capacity((width * height * 4) as usize),
+            backbuffer: backbuffer,
         }
     }
 
     /// Fill backbuffer with given data.
     pub fn backbuffer_fill(&mut self, data: &[u8]) {
         let max = self.backbuffer.capacity();
-        self.backbuffer.clear();
-        for (_, v) in data.into_iter()
+        for (i, v) in data.into_iter()
                           .enumerate()
                           .take_while(|&(i, _)| i < max) {
-            self.backbuffer.push(*v);
+            self.backbuffer[i] = *v;
         }
     }
 
