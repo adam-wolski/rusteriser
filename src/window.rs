@@ -22,18 +22,14 @@ impl<'a> Window<'a> {
         let video = context.video().unwrap();
         let window = video.window(title, width, height).build().unwrap();
         let renderer = window.renderer().build().unwrap();
-        // Create static texture that will be used as a buffer.
+        // Create texture that will be used as a buffer.
         let bt = renderer.create_texture_static(sdl2::pixels::PixelFormatEnum::ARGB8888,
                                                 width,
                                                 height)
                          .unwrap();
-        // Backbuffer has the same amount of pixels as window, though we store data as u8 for
-        // better compatibility with sdl_texture so we multiply that by 4 to get ARGB8 format.
-        let mut backbuffer: Vec<u8> = Vec::with_capacity((width * height * 4) as usize);
-        // Initialize backbuffer with black color
-        for _ in 0..backbuffer.capacity() {
-            backbuffer.push(0);
-        }
+        // Backbuffer has the same amount of pixels as window, we store data as u8 for
+        // compatibility with sdl_texture so we multiply that by 4 to get ARGB8 format.
+        let backbuffer: Vec<u8> = vec!(0; (width * height * 4) as usize);
         Window {
             context: context,
             renderer: renderer,
