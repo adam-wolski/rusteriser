@@ -9,4 +9,6 @@ log = '*'
 env_logger = '*'
 clippy = '*'
 sdl2 = '*'
-tobj = "*"
+tobj = '*'
+cgmath = '*'
+image = "0.8.0"
