@@ -47,7 +47,7 @@ fn main() {
 
     window.backbuffer_fill(framebuffer.data_as_ref());
     window.swap();
-    common::save_buffer_as_image(Path::new("./test.png"),
+    common::save_buffer_as_image(Path::new("./test_output/test.png"),
                                  framebuffer.data_as_ref(),
                                  WINDOW_WIDTH,
                                  WINDOW_HEIGHT);
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_lines() {
-        let testmodelpath = Path::new("./content/box.obj");
+        let testmodelpath = Path::new("./content/monkey.obj");
         let testmodel = model::Model::load(testmodelpath);
 
         let mut framebuffer = framebuffer::Framebuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -86,6 +86,40 @@ mod tests {
                 line::draw(x0, y0, x1, y1, color, &mut framebuffer);
             }
         }
+        common::save_buffer_as_image(Path::new("./test_output/test_lines.png"),
+                                     framebuffer.data_as_ref(),
+                                     WINDOW_WIDTH,
+                                     WINDOW_HEIGHT);
+    }
+
+    #[test]
+    fn test_lines_iter() {
+        let testmodelpath = Path::new("./content/monkey.obj");
+        let testmodel = model::Model::load(testmodelpath);
+
+        let mut framebuffer = framebuffer::Framebuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
+        let color = color::Color::white();
+
+        for face in &testmodel.faces {
+            for i in 0..3 {
+                let (x0, y0) = common::screen_to_image_space(face[i % 3].x,
+                                                             face[i % 3].y,
+                                                             WINDOW_WIDTH,
+                                                             WINDOW_HEIGHT);
+                let (x1, y1) = common::screen_to_image_space(face[(i + 1) % 3].x,
+                                                             face[(i + 1) % 3].y,
+                                                             WINDOW_WIDTH,
+                                                             WINDOW_HEIGHT);
+                let line = line::LineIterator::new(x0, y0, x1, y1);
+                for point in line {
+                    framebuffer.setxy(point.0 as u32, point.1 as u32, color);
+                }
+            }
+        }
+        common::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
+                                     framebuffer.data_as_ref(),
+                                     WINDOW_WIDTH,
+                                     WINDOW_HEIGHT);
     }
 
     #[bench]
@@ -100,6 +134,18 @@ mod tests {
                        color,
                        &mut framebuffer)
         });
+    }
+
+    #[bench]
+    fn bench_line_iter(b: &mut Bencher) {
+        let mut framebuffer = framebuffer::Framebuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
+        let color = color::Color::white();
+        b.iter(|| {
+            let line = line::LineIterator::new(0, 0, WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1);
+            for point in line {
+                framebuffer.setxy(point.0 as u32, point.1 as u32, color);
+            }
+        })
     }
 
     #[bench]
