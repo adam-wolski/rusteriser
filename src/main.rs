@@ -33,9 +33,11 @@ const WINDOW_HEIGHT: u32 = 512;
 
 
 fn simple_shade(face: &[cgmath::Vector3<f32>], light_dir: cgmath::Vector3<f32>) -> Option<color::Color> {
-    let normal: cgmath::Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
-    normal.normalize();
-    let intensity: f32 = normal.dot(light_dir) * 100.0;
+    // Get the normal vector.
+    let mut normal: cgmath::Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
+    debug!("Before normalize: {:?}", normal);
+    normal = normal.normalize();
+    let intensity: f32 = normal.dot(light_dir);
     debug!("\nFace: {:?}\nNormal: {:?}\nLightDir: {:?}\nIntensity: {}\n", face, normal, light_dir, intensity);
     if intensity > 0.0 {
         let clr = (intensity * 255.0).round() as u8;
