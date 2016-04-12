@@ -10,6 +10,8 @@ extern crate tobj;
 extern crate cgmath;
 extern crate image;
 extern crate test;
+extern crate rand;
+
 
 pub mod window;
 pub mod line;
@@ -19,11 +21,30 @@ pub mod color;
 pub mod common;
 pub mod triangle;
 
+
 use std::path::Path;
+use std::thread;
+use std::time;
+
+use cgmath::EuclideanVector;
+
+const WINDOW_WIDTH: u32 = 512;
+const WINDOW_HEIGHT: u32 = 512;
 
 
-const WINDOW_WIDTH: u32 = 256;
-const WINDOW_HEIGHT: u32 = 256;
+fn simple_shade(face: &[cgmath::Vector3<f32>], light_dir: cgmath::Vector3<f32>) -> Option<color::Color> {
+    let normal: cgmath::Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
+    normal.normalize();
+    let intensity: f32 = normal.dot(light_dir) * 100.0;
+    debug!("\nFace: {:?}\nNormal: {:?}\nLightDir: {:?}\nIntensity: {}\n", face, normal, light_dir, intensity);
+    if intensity > 0.0 {
+        let clr = (intensity * 255.0).round() as u8;
+        debug!("\nColor: {}", clr);
+        Some(color::Color::new(clr, clr, clr, 255))
+    } else {
+        None
+    }
+}
 
 
 fn main() {
@@ -32,8 +53,10 @@ fn main() {
     let mut window = window::Window::new("Rusteriser", WINDOW_WIDTH, WINDOW_HEIGHT);
     let mut framebuffer = framebuffer::Framebuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    let testmodelpath = Path::new("./content/monkey.obj");
+    let testmodelpath = Path::new("./content/african_head.obj");
     let testmodel = model::Model::load(testmodelpath);
+
+    let lightdir = cgmath::Vector3::new(0.0, 0.0, -1.0);
 
     for face in &testmodel.faces {
         let mut newface: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
@@ -41,17 +64,23 @@ fn main() {
             let (x, y) = common::screen_to_image_space(pos.x, pos.y, WINDOW_WIDTH, WINDOW_HEIGHT);
             newface.push(cgmath::Vector2::new(x, y));
         }
-
-        triangle::draw(&newface, color::Color::white(), &mut framebuffer);
+        if let Some(color) = simple_shade(face.as_ref(), lightdir) {
+            triangle::draw(&newface,
+                           color,
+                           &mut framebuffer);
+        }
     }
 
-    window.backbuffer_fill(framebuffer.data_as_ref());
-    window.swap();
     common::save_buffer_as_image(Path::new("./test_output/test.png"),
                                  framebuffer.data_as_ref(),
                                  WINDOW_WIDTH,
                                  WINDOW_HEIGHT);
-    while window.is_running() {}
+
+    window.backbuffer_fill(framebuffer.data_as_ref());
+    window.swap();
+    while window.is_running() {
+        thread::sleep(time::Duration::from_secs(1));
+    }
 }
 
 
