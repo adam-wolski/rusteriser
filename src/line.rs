@@ -143,21 +143,21 @@ impl LineIterator {
 }
 
 impl Iterator for LineIterator {
-    type Item = (i32, i32);
+    type Item = (u32, u32);
 
-    fn next(&mut self) -> Option<(i32, i32)> {
+    fn next(&mut self) -> Option<(u32, u32)> {
         if self.count >= self.d0 {
             return None;
         }
         if self.count == 0 {
             self.count += 1;
             if self.swapped {
-                return Some((self.v0, self.v1));
+                return Some((self.v0 as u32, self.v1 as u32));
             } else {
-                return Some((self.v1, self.v0));
+                return Some((self.v1 as u32, self.v0 as u32));
             }
         }
-        
+
         while self.e >= 0 {
             self.v0 = self.v0 + self.dir0;
             self.e = self.e - 2 * self.d0
@@ -169,9 +169,9 @@ impl Iterator for LineIterator {
         self.count += 1;
 
         if self.swapped {
-            Some((self.v0, self.v1))
+            Some((self.v0 as u32, self.v1 as u32))
         } else {
-            Some((self.v1, self.v0))
+            Some((self.v1 as u32, self.v0 as u32))
         }
     }
 }
