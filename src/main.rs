@@ -15,7 +15,6 @@ extern crate rand;
 
 pub mod window;
 pub mod line;
-pub mod framebuffer;
 pub mod model;
 pub mod color;
 pub mod common;
