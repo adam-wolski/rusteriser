@@ -1,9 +1,29 @@
 use std::path::Path;
 use image;
 
-pub fn save_buffer_as_image(path: &Path, buffer: &[u8], width: u32, height: u32) {
+/// Get 1D position from 2D coordinates.
+/// Useful for setting/getting point in buffer.
+#[inline]
+pub fn xy(x: usize, y: usize, width: usize) -> usize {
+    x + y * width
+}
+
+/// Convert array of 32 bit unsigned integers to 8 bit one.
+/// Assumes that every 8 bits of 32bit integer is separate number.
+pub fn vec32_to_8(input: &[u32]) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::new();
+    for val in input {
+        result.push(*val as u8);
+        result.push((*val >> 8) as u8);
+        result.push((*val >> 16) as u8);
+        result.push((*val >> 24) as u8);
+    }
+    result
+}
+
+pub fn save_buffer_as_image(path: &Path, buffer: &[u32], width: u32, height: u32) {
     let clrtype = image::ColorType::RGBA(8);
-    image::save_buffer(path, buffer, width, height, clrtype).unwrap();
+    image::save_buffer(path, vec32_to_8(buffer).as_ref(), width, height, clrtype).unwrap();
 }
 
 /// Convert screen (-1 to 1) coordinates to image space (0 - screen size) based on image

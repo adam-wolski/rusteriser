@@ -18,6 +18,15 @@ impl Color {
         }
     }
 
+    /// u32 value with color bits in order blue, green, red, alpha.
+    pub fn bgra(&self) -> u32 {
+        ((self.a as u32) << 24) | ((self.r as u32) << 16) | ((self.g as u32) << 8) | (self.b as u32)
+    }
+
+    pub fn rgba(&self) -> u32 {
+        ((self.a as u32) << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | (self.r as u32)
+    }
+
     pub fn white() -> Color {
         Color {
             r: 255,

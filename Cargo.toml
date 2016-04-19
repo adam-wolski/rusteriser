@@ -12,3 +12,4 @@ sdl2 = '*'
 tobj = '*'
 cgmath = '*'
 image = "0.8.0"
+rand = '*'

@@ -4,8 +4,17 @@ use std::fmt;
 
 use color::Color;
 
+pub enum Format {
+    BGRA,
+    RGBA,
+    RGB,
+    L,
+}
+
 /// Let's define our framebuffer as struct so we can add some convenience methods for accessing it.
 /// Data will be held as vector of u8s where each 4 represent one color in BGRA order.
+// TODO: Could be usefull later to implement different texture types, mainly for performance reasons.
+// So we don't create zbuffer with RGBA values.
 pub struct Framebuffer {
     data: Vec<u8>,
     width: u32,
@@ -31,6 +40,8 @@ impl Framebuffer {
     /// Set location in buffer to specified color.
     /// Location is taken in "buffer space"
     /// with x being: from 0 to buffer_width and y: 0 to buffer_height
+    /// # Panics
+    /// * To big x or y values.
     pub fn setxy(&mut self, x: u32, y: u32, color: Color) {
         assert!(x < self.width,
                 "Given x({}) is bigger then buffer width({}).",
@@ -45,6 +56,19 @@ impl Framebuffer {
         self.data[pos + 1] = color.g;
         self.data[pos + 2] = color.r;
         self.data[pos + 3] = color.a;
+    }
+
+    pub fn getxy(&self, x: u32, y: u32) -> Color {
+        assert!(x < self.width,
+                "Given x({}) is bigger then buffer width({}).",
+                x,
+                self.width);
+        assert!(y < self.height,
+                "Given y({}) is bigger then buffer height({}).",
+                y,
+                self.height);
+        let pos = ((x + y * self.width) * 4) as usize;
+        Color::new(self.data[pos + 2], self.data[pos + 1], self.data[pos], self.data[pos + 4])
     }
 
     /// Fill buffer with single color tuple (R, G, B, A).

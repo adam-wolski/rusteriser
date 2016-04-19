@@ -1,8 +1,8 @@
 //! Line creation module.
 
 use std::mem;
-use framebuffer;
 use color;
+use common;
 
 
 /// Draw line using Bresenham algorithm.
@@ -11,7 +11,8 @@ pub fn draw(x0: u32,
             x1: u32,
             y1: u32,
             color: color::Color,
-            target: &mut framebuffer::Framebuffer) {
+            buffer: &mut [u32],
+            buffer_width: usize) {
 
     // Values of current point in line.
     let mut v0 = y0 as i32;
@@ -52,7 +53,7 @@ pub fn draw(x0: u32,
     let mut e = 2 * d1 - d0;
     if swapped {
         for _ in 0..d0 {
-            target.setxy(v0 as u32, v1 as u32, color);
+            buffer[common::xy(v0 as usize, v1 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
                 v0 = v0 + dir0;
                 e = e - 2 * d0;
@@ -62,7 +63,7 @@ pub fn draw(x0: u32,
         }
     } else {
         for _ in 0..d0 {
-            target.setxy(v1 as u32, v0 as u32, color);
+            buffer[common::xy(v1 as usize, v0 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
                 v0 = v0 + dir0;
                 e = e - 2 * d0;
@@ -143,18 +144,18 @@ impl LineIterator {
 }
 
 impl Iterator for LineIterator {
-    type Item = (u32, u32);
+    type Item = (usize, usize);
 
-    fn next(&mut self) -> Option<(u32, u32)> {
+    fn next(&mut self) -> Option<(usize, usize)> {
         if self.count >= self.d0 {
             return None;
         }
         if self.count == 0 {
             self.count += 1;
             if self.swapped {
-                return Some((self.v0 as u32, self.v1 as u32));
+                return Some((self.v0 as usize, self.v1 as usize));
             } else {
-                return Some((self.v1 as u32, self.v0 as u32));
+                return Some((self.v1 as usize, self.v0 as usize));
             }
         }
 
@@ -169,9 +170,9 @@ impl Iterator for LineIterator {
         self.count += 1;
 
         if self.swapped {
-            Some((self.v0 as u32, self.v1 as u32))
+            Some((self.v0 as usize, self.v1 as usize))
         } else {
-            Some((self.v1 as u32, self.v0 as u32))
+            Some((self.v1 as usize, self.v0 as usize))
         }
     }
 }
