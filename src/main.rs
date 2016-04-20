@@ -24,6 +24,7 @@ pub mod triangle;
 use std::path::Path;
 use std::time;
 use std::thread;
+use std::sync;
 
 use cgmath::EuclideanVector;
 
@@ -46,9 +47,9 @@ fn simple_shade(face: &[cgmath::Vector3<f32>], light_dir: cgmath::Vector3<f32>) 
 
 
 struct FaceThreadResult {
-    bp: usize, // Buffer position
-    fbv: u32,  // Frame buffer value
-    zbv: f32, // Z Buffer value
+    pub bi: Vec<usize>, // Buffer index
+    pub fbv: Vec<u32>, // Frame buffer values
+    pub zbv: Vec<f32>, // Z Buffer values
 }
 
 
@@ -59,29 +60,54 @@ fn main() {
     let mut framebuffer: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
     let framebuffer_width = WINDOW_WIDTH as usize;
     let mut zbuffer: Vec<f32> = vec![0.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
-    let zbuffer_width = WINDOW_WIDTH as usize;
 
-    let testmodelpath = Path::new("./content/box.obj");
+    let testmodelpath = Path::new("./content/african_head.obj");
     let testmodel = model::Model::load(testmodelpath);
 
     let lightdir = cgmath::Vector3::new(0.0, 0.0, -1.0);
 
-    for face in &testmodel.faces {
-        let mut image_face: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
-        let mut z: f32 = 0.0;
-        for pos in face.iter().take(3) {
-            let (x, y) = common::screen_to_image_space(pos.x, pos.y, WINDOW_WIDTH, WINDOW_HEIGHT);
-            image_face.push(cgmath::Vector2::new(x, y));
-            z += pos.z;
-        }
-        let color = simple_shade(face.as_ref(), lightdir);
-        let triangle = triangle::TriangleIterator::new(&image_face);
-        for line in triangle {
-            for point in line {
-                if z > zbuffer[common::xy(point.0, point.1, zbuffer_width)] {
-                    framebuffer[common::xy(point.0, point.1, framebuffer_width)] = color.bgra();
-                    zbuffer[common::xy(point.0, point.1, zbuffer_width)] = z;
+    let (tx, rx) = sync::mpsc::channel();
+
+    for face in testmodel.faces.clone() {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            let mut result = FaceThreadResult {
+                bi: Vec::with_capacity(1000),
+                fbv: Vec::with_capacity(1000),
+                zbv: Vec::with_capacity(1000),
+            };
+            let mut image_face: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
+            let mut z: f32 = 0.0;
+            for pos in face.iter().take(3) {
+                let (x, y) = common::screen_to_image_space(pos.x,
+                                                           pos.y,
+                                                           WINDOW_WIDTH,
+                                                           WINDOW_HEIGHT);
+                image_face.push(cgmath::Vector2::new(x, y));
+                z += pos.z;
+            }
+            let color = simple_shade(face.as_ref(), lightdir);
+            let triangle = triangle::TriangleIterator::new(&image_face);
+            for line in triangle {
+                for point in line {
+                    result.bi.push(common::xy(point.0, point.1, framebuffer_width));
+                    result.fbv.push(color.bgra());
+                    result.zbv.push(z);
                 }
+            }
+            tx.send(result).unwrap();
+        });
+    }
+
+    for _ in 0..testmodel.faces.len() {
+        let result: FaceThreadResult = rx.recv().unwrap();
+        for i in 0..result.bi.len() {
+            let bi = result.bi[i];
+            let z_b_v = result.zbv[i];
+            let f_b_v = result.fbv[i];
+            if z_b_v > zbuffer[bi] {
+                framebuffer[bi] = f_b_v;
+                zbuffer[bi] = z_b_v;
             }
         }
     }
@@ -169,15 +195,7 @@ mod tests {
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();
-        b.iter(|| {
-            line::draw(0,
-                       0,
-                       WINDOW_WIDTH,
-                       WINDOW_HEIGHT,
-                       color,
-                       &mut fb,
-                       fb_width)
-        })
+        b.iter(|| line::draw(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, color, &mut fb, fb_width))
     }
 
     #[bench]
