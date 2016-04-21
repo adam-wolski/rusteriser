@@ -69,7 +69,9 @@ const EPSILON_SQUARE: f32 = EPSILON * EPSILON;
 //     check_side1 && check_side2 && check_side3
 // }
 
-fn point_in_triangle_bounding_box(x1: f32, y1: f32, x2: f32, y2: f32, x3: f32, y3: f32, x: f32, y: f32) -> bool {
+fn point_in_triangle_bounding_box(x1: f32, y1: f32, x2: f32, y2: f32, x3: f32, y3: f32, point: (f32, f32)) -> bool {
+    let x = point.0;
+    let y = point.1;
     let x_min: f32 = x1.min(x2.min(x3)) - EPSILON;
     let x_max: f32 = x1.max(x2.max(x3)) + EPSILON;
     let y_min: f32 = y1.min(y2.min(y3)) - EPSILON;
@@ -102,7 +104,7 @@ fn point_in_triangle(point: (usize, usize), triangle: &[Vector2<u32>]) -> bool {
     let x = point.0 as f32;
     let y = point.1 as f32;
 
-    if !point_in_triangle_bounding_box(x1, y1, x2, y2, x3, y3, x, y) {
+    if !point_in_triangle_bounding_box(x1, y1, x2, y2, x3, y3, (x, y)) {
         return false;
     }
 
