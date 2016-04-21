@@ -42,7 +42,7 @@ mod tests {
     fn test_screen_to_image_space() {
         let width = 64;
         let height = 64;
-        assert!(screen_to_image_space(-1.0, 0.0, width, height) == (0, 31));
-        assert!(screen_to_image_space(0.0, 1.0, width, height) == (31, 63));
+        assert_eq!(screen_to_image_space(-1.0, 0.0, width, height), (0, 31));
+        assert_eq!(screen_to_image_space(0.0, 1.0, width, height), (31, 63));
     }
 }

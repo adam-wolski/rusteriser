@@ -26,15 +26,15 @@ use std::time;
 use std::thread;
 use std::sync;
 
-use cgmath::EuclideanVector;
+use cgmath::*;
 
 const WINDOW_WIDTH: u32 = 256;
 const WINDOW_HEIGHT: u32 = 256;
 
 
-fn simple_shade(face: &[cgmath::Vector3<f32>], light_dir: cgmath::Vector3<f32>) -> color::Color {
+fn simple_shade(face: &[Vector3<f32>], light_dir: Vector3<f32>) -> color::Color {
     // Get the normal vector.
-    let mut normal: cgmath::Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
+    let mut normal: Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
     normal = normal.normalize();
     let intensity: f32 = normal.dot(light_dir);
     if intensity > 0.0 {
@@ -64,7 +64,7 @@ fn main() {
     let testmodelpath = Path::new("./content/african_head.obj");
     let testmodel = model::Model::load(testmodelpath);
 
-    let lightdir = cgmath::Vector3::new(0.0, 0.0, -1.0);
+    let lightdir = Vector3::new(0.0, 0.0, -1.0);
 
     let (tx, rx) = sync::mpsc::channel();
 
@@ -76,14 +76,14 @@ fn main() {
                 fbv: Vec::with_capacity(1000),
                 zbv: Vec::with_capacity(1000),
             };
-            let mut image_face: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
+            let mut image_face: Vec<Vector2<u32>> = Vec::with_capacity(3);
             let mut z: f32 = 0.0;
             for pos in face.iter().take(3) {
                 let (x, y) = common::screen_to_image_space(pos.x,
                                                            pos.y,
                                                            WINDOW_WIDTH,
                                                            WINDOW_HEIGHT);
-                image_face.push(cgmath::Vector2::new(x, y));
+                image_face.push(Vector2::new(x, y));
                 z += pos.z;
             }
             let color = simple_shade(face.as_ref(), lightdir);
@@ -130,7 +130,7 @@ mod tests {
     use test::Bencher;
     use super::*;
     use std::path::Path;
-    use cgmath;
+    use cgmath::*;
 
     const WINDOW_WIDTH: u32 = 512;
     const WINDOW_HEIGHT: u32 = 512;
@@ -216,10 +216,10 @@ mod tests {
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();
-        let mut tri: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
-        tri.push(cgmath::Vector2::<u32>::new(0, 0));
-        tri.push(cgmath::Vector2::<u32>::new(0, WINDOW_HEIGHT));
-        tri.push(cgmath::Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
+        let mut tri: Vec<Vector2<u32>> = Vec::with_capacity(3);
+        tri.push(Vector2::<u32>::new(0, 0));
+        tri.push(Vector2::<u32>::new(0, WINDOW_HEIGHT));
+        tri.push(Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
         b.iter(|| triangle::draw(&tri, color, &mut fb, fb_width));
         common::save_buffer_as_image(Path::new("./test_output/bench_triangle.png"),
                                      &fb,
@@ -232,10 +232,10 @@ mod tests {
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();
-        let mut tri: Vec<cgmath::Vector2<u32>> = Vec::with_capacity(3);
-        tri.push(cgmath::Vector2::<u32>::new(0, 0));
-        tri.push(cgmath::Vector2::<u32>::new(0, WINDOW_HEIGHT));
-        tri.push(cgmath::Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
+        let mut tri: Vec<Vector2<u32>> = Vec::with_capacity(3);
+        tri.push(Vector2::<u32>::new(0, 0));
+        tri.push(Vector2::<u32>::new(0, WINDOW_HEIGHT - 1));
+        tri.push(Vector2::<u32>::new(WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1));
 
         b.iter(|| {
             let triangle = triangle::TriangleIterator::new(&tri);
