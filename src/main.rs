@@ -145,12 +145,12 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = common::screen_to_image_space(face[i % 3].x,
-                                                             face[i % 3].y,
+                let (x0, y0) = common::screen_to_image_space(face.verts[i % 3].pos.x,
+                                                             face.verts[i % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
-                let (x1, y1) = common::screen_to_image_space(face[(i + 1) % 3].x,
-                                                             face[(i + 1) % 3].y,
+                let (x1, y1) = common::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
+                                                             face.verts[(i + 1) % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
                 line::draw(x0, y0, x1, y1, color, &mut fb, fb_width);
@@ -171,12 +171,12 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = common::screen_to_image_space(face[i % 3].x,
-                                                             face[i % 3].y,
+                let (x0, y0) = common::screen_to_image_space(face.verts[i % 3].pos.x,
+                                                             face.verts[i % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
-                let (x1, y1) = common::screen_to_image_space(face[(i + 1) % 3].x,
-                                                             face[(i + 1) % 3].y,
+                let (x1, y1) = common::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
+                                                             face.verts[(i + 1) % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
                 let line = line::LineIterator::new(x0, y0, x1, y1);
