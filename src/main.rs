@@ -32,9 +32,10 @@ const WINDOW_WIDTH: u32 = 256;
 const WINDOW_HEIGHT: u32 = 256;
 
 
-fn simple_shade(face: &[Vector3<f32>], light_dir: Vector3<f32>) -> color::Color {
+fn simple_shade(face: &model::Face, light_dir: Vector3<f32>) -> color::Color {
     // Get the normal vector.
-    let mut normal: Vector3<f32> = (face[2] - face[0]).cross((face[1] - face[0]));
+    let mut normal: Vector3<f32> = (face.verts[2].pos - face.verts[0].pos)
+        .cross((face.verts[1].pos - face.verts[0].pos));
     normal = normal.normalize();
     let intensity: f32 = normal.dot(light_dir);
     if intensity > 0.0 {
@@ -61,7 +62,7 @@ fn main() {
     let framebuffer_width = WINDOW_WIDTH as usize;
     let mut zbuffer: Vec<f32> = vec![0.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
 
-    let testmodelpath = Path::new("./content/african_head.obj");
+    let testmodelpath = Path::new("./content/african_head/african_head.obj");
     let testmodel = model::Model::load(testmodelpath);
 
     let lightdir = Vector3::new(0.0, 0.0, -1.0);
@@ -78,15 +79,15 @@ fn main() {
             };
             let mut image_face: Vec<Vector2<u32>> = Vec::with_capacity(3);
             let mut z: f32 = 0.0;
-            for pos in face.iter().take(3) {
-                let (x, y) = common::screen_to_image_space(pos.x,
-                                                           pos.y,
+            for vertex in &face.verts {
+                let (x, y) = common::screen_to_image_space(vertex.pos.x,
+                                                           vertex.pos.y,
                                                            WINDOW_WIDTH,
                                                            WINDOW_HEIGHT);
                 image_face.push(Vector2::new(x, y));
-                z += pos.z;
+                z += vertex.pos.z;
             }
-            let color = simple_shade(face.as_ref(), lightdir);
+            let color = simple_shade(&face, lightdir);
             let triangle = triangle::TriangleIterator::new(&image_face);
             for line in triangle {
                 for point in line {
