@@ -27,26 +27,34 @@ use std::thread;
 use std::sync;
 
 use cgmath::*;
+use image::{Pixel, GenericImage};
+
 
 const WINDOW_WIDTH: u32 = 256;
 const WINDOW_HEIGHT: u32 = 256;
 
 
-fn simple_shade(face: &model::Face, light_dir: Vector3<f32>) -> color::Color {
-    // Get the normal vector.
-    let mut normal: Vector3<f32> = (face.verts[2].pos - face.verts[0].pos)
-        .cross((face.verts[1].pos - face.verts[0].pos));
-    normal = normal.normalize();
-    let intensity: f32 = normal.dot(light_dir);
-    if intensity > 0.0 {
-        let clr = (intensity * 255.0).round() as u8;
-        color::Color::new(clr, clr, clr, 255)
-    } else {
-        color::Color::new(0, 0, 0, 255)
-    }
+fn pixel_shader(light_dir: Vector3<f32>,
+                normal: Vector3<f32>,
+                texcoord: Vector2<f32>,
+                texture: &image::DynamicImage)
+                -> Vector4<f32> {
+    let (texwidth, texheight) = texture.dimensions();
+    let (tx, ty) = common::texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
+    let t_clr = color::as_ranges(texture.get_pixel(tx, ty).channels4());
+
+    let n = normal.normalize();
+    let l = light_dir.normalize();
+    let ndotl = common::saturate(n.dot(l));
+
+    Vector4::new(t_clr.0 * ndotl,
+                 t_clr.1 * ndotl,
+                 t_clr.2 * ndotl,
+                 t_clr.3)
 }
 
 
+/// Results returned from threads run per face.
 struct FaceThreadResult {
     pub bi: Vec<usize>, // Buffer index
     pub fbv: Vec<u32>, // Frame buffer values
@@ -62,15 +70,20 @@ fn main() {
     let framebuffer_width = WINDOW_WIDTH as usize;
     let mut zbuffer: Vec<f32> = vec![0.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
 
-    let testmodelpath = Path::new("./content/african_head/african_head.obj");
-    let testmodel = model::Model::load(testmodelpath);
+    let modelpath = Path::new("./content/african_head/african_head.obj");
+    // let modelpath = Path::new("./content/box.obj");
+    let model = model::Model::load(modelpath).unwrap();
 
-    let lightdir = Vector3::new(0.0, 0.0, -1.0);
+    let texture_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
+
+    let lightdir = Vector3::new(0.0, 0.0, 1.0);
 
     let (tx, rx) = sync::mpsc::channel();
 
-    for face in testmodel.faces.clone() {
+    let texture = sync::Arc::new(texture_image);
+    for face in model.faces.clone() {
         let tx = tx.clone();
+        let tex = texture.clone();
         thread::spawn(move || {
             let mut result = FaceThreadResult {
                 bi: Vec::with_capacity(1000),
@@ -78,29 +91,47 @@ fn main() {
                 zbv: Vec::with_capacity(1000),
             };
             let mut image_face: Vec<Vector2<u32>> = Vec::with_capacity(3);
-            let mut z: f32 = 0.0;
             for vertex in &face.verts {
                 let (x, y) = common::screen_to_image_space(vertex.pos.x,
                                                            vertex.pos.y,
                                                            WINDOW_WIDTH,
                                                            WINDOW_HEIGHT);
                 image_face.push(Vector2::new(x, y));
-                z += vertex.pos.z;
             }
-            let color = simple_shade(&face, lightdir);
             let triangle = triangle::TriangleIterator::new(&image_face);
             for line in triangle {
                 for point in line {
+                    let bary = match triangle::barycentric(point, &image_face) {
+                        Some(b) => b,
+                        None => continue,
+                    };
                     result.bi.push(common::xy(point.0, point.1, framebuffer_width));
-                    result.fbv.push(color.bgra());
-                    result.zbv.push(z);
+                    result.zbv.push(face.verts[0].pos.z * bary.x + face.verts[1].pos.z * bary.y +
+                                    face.verts[2].pos.z * bary.z);
+                    let texcoord = Vector2::<f32>::new(face.verts[0].texcoord.x * bary.x +
+                                                       face.verts[1].texcoord.x * bary.y +
+                                                       face.verts[2].texcoord.x * bary.z,
+                                                       face.verts[0].texcoord.y * bary.x +
+                                                       face.verts[1].texcoord.y * bary.y +
+                                                       face.verts[2].texcoord.y * bary.z);
+                    let normal = Vector3::<f32>::new(face.verts[0].normal.x * bary.x +
+                                                     face.verts[1].normal.x * bary.y +
+                                                     face.verts[2].normal.x * bary.z,
+                                                     face.verts[0].normal.y * bary.x +
+                                                     face.verts[1].normal.y * bary.y +
+                                                     face.verts[2].normal.y * bary.z,
+                                                     face.verts[0].normal.z * bary.x +
+                                                     face.verts[1].normal.z * bary.y +
+                                                     face.verts[2].normal.z * bary.z);
+                    let pixel_color = pixel_shader(lightdir, normal, texcoord, &tex);
+                    result.fbv.push(color::as_value(pixel_color));
                 }
             }
             tx.send(result).unwrap();
         });
     }
 
-    for _ in 0..testmodel.faces.len() {
+    for _ in 0..model.faces.len() {
         let result: FaceThreadResult = rx.recv().unwrap();
         for i in 0..result.bi.len() {
             let bi = result.bi[i];
@@ -117,7 +148,7 @@ fn main() {
                                  framebuffer.as_ref(),
                                  WINDOW_WIDTH,
                                  WINDOW_HEIGHT);
-    window.backbuffer_fill(&common::vec32_to_8(&framebuffer));
+    window.backbuffer_fill(&common::arr32_to_8(&framebuffer));
     window.swap();
 
     while window.is_running() {
@@ -139,7 +170,7 @@ mod tests {
     #[test]
     fn test_lines() {
         let testmodelpath = Path::new("./content/monkey.obj");
-        let testmodel = model::Model::load(testmodelpath);
+        let testmodel = model::Model::load(testmodelpath).unwrap();
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();
@@ -165,7 +196,7 @@ mod tests {
     #[test]
     fn test_lines_iter() {
         let testmodelpath = Path::new("./content/monkey.obj");
-        let testmodel = model::Model::load(testmodelpath);
+        let testmodel = model::Model::load(testmodelpath).unwrap();
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();

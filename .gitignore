@@ -3,3 +3,4 @@ target
 rusty-tags.vi
 Cargo.lock
 test_output/*
+content/*
