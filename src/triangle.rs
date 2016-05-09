@@ -4,17 +4,25 @@ use color;
 use common;
 
 
-pub fn barycentric(point: (usize, usize), tri: &[Vector2<u32>]) -> Option<Vector3<f32>> {
-    let u: Vector3<f32> = Vector3::<f32>::new(tri[2].x as f32 - tri[0].x as f32,
-                                              tri[1].x as f32 - tri[0].x as f32,
-                                              tri[0].x as f32 - point.0 as f32)
-                              .cross(Vector3::<f32>::new(tri[2].y as f32 - tri[0].y as f32,
-                                                         tri[1].y as f32 - tri[0].y as f32,
-                                                         tri[0].y as f32 - point.1 as f32));
+/// Returns barycentric coordinates of point `point` in triangle `tri`.
+/// Triangle vertices positions are taken as Vector3 even though the function operates only in 
+/// 2 dimensions for compatibility with rendering loops.
+pub fn barycentric(point: Vector2<f32>, tri: &[Vector3<f32>]) -> Option<Vector3<f32>> {
+    let u: Vector3<f32> = Vector3::new(tri[2].x - tri[0].x,
+                                       tri[1].x - tri[0].x,
+                                       tri[0].x - point.x)
+                              .cross(Vector3::new(tri[2].y - tri[0].y,
+                                                  tri[1].y - tri[0].y,
+                                                  tri[0].y - point.y));
     if u.z.abs() < 1.0 {
         None
     } else {
-        Some(Vector3::<f32>::new(1.0 - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z))
+        let result = Vector3::<f32>::new(1.0 - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+        if result.x < 0.0 || result.y < 0.0 || result.z < 0.0 {
+            None
+        } else {
+            Some(result)
+        }
     }
 }
 

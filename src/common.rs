@@ -52,7 +52,8 @@ pub fn save_buffer_as_image(path: &Path, buffer: &[u32], width: u32, height: u32
 /// Convert screen (-1 to 1) coordinates to image space (0 - screen size) based on image
 /// width and height.
 pub fn screen_to_image_space(x: f32, y: f32, width: u32, height: u32) -> (u32, u32) {
-    assert!(x <= 1.0 && x >= -1.0 && y <= 1.0 && y >= -1.0);
+    assert!(x <= 1.0 && x >= -1.0, "x value: {}, is not a valid screen space coordinate", x);
+    assert!(y <= 1.0 && y >= -1.0, "y value: {}, is not a vallid screen space coordinate", y);
     (((x + 1.0) / 2.0 * (width - 1) as f32) as u32,
      ((y + 1.0) / 2.0 * (height - 1) as f32) as u32)
 }
@@ -60,7 +61,8 @@ pub fn screen_to_image_space(x: f32, y: f32, width: u32, height: u32) -> (u32, u
 /// Convert texcoord (0 to 1) coordinates to image space (0 - screen size) based on image
 /// width and height.
 pub fn texcoord_to_image_space(x: f32, y: f32, width: u32, height: u32) -> (u32, u32) {
-    assert!(x <= 1.0 && x >= 0.0 && y <= 1.0 && y >= 0.0);
+    assert!(x <= 1.0 && x >= 0.0, "x value: {}, is not a valid texture coordinate", x);
+    assert!(y <= 1.0 && y >= 0.0, "y value: {}, is not a valid texture coordinate", y);
     (((x * (width - 1) as f32) as u32,
       ((y * (height - 1) as f32) as u32)))
 }

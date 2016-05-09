@@ -47,10 +47,7 @@ fn pixel_shader(light_dir: Vector3<f32>,
     let l = light_dir.normalize();
     let ndotl = common::saturate(n.dot(l));
 
-    Vector4::new(t_clr.0 * ndotl,
-                 t_clr.1 * ndotl,
-                 t_clr.2 * ndotl,
-                 t_clr.3)
+    Vector4::new(t_clr.0 * ndotl, t_clr.1 * ndotl, t_clr.2 * ndotl, t_clr.3)
 }
 
 
@@ -70,6 +67,20 @@ fn main() {
     let framebuffer_width = WINDOW_WIDTH as usize;
     let mut zbuffer: Vec<f32> = vec![0.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
 
+    let camera: Vector3<f32> = Vector3::new(0.0, 0.0, 3.0);
+
+    let mut projection: Matrix4<f32> = Matrix4::identity();
+
+    let front_clip: f32 = 0.0;
+    let near_clip: f32 = 1.0;
+    let mut view: Matrix4<f32> = Matrix4::identity();
+    view[0][0] = (WINDOW_WIDTH - 1) as f32 / 2.0;
+    view[1][1] = (WINDOW_HEIGHT - 1) as f32 / 2.0;
+    // view[2][2] = (front_clip - near_clip) / 2;
+    view[3][0] = (WINDOW_WIDTH - 1) as f32 / 2.0;
+    view[3][1] = (WINDOW_HEIGHT - 1) as f32 / 2.0;
+    // view[3][2] = (near_clip + front_clip) / 2.0;
+
     let modelpath = Path::new("./content/african_head/african_head.obj");
     // let modelpath = Path::new("./content/box.obj");
     let model = model::Model::load(modelpath).unwrap();
@@ -81,6 +92,7 @@ fn main() {
     let (tx, rx) = sync::mpsc::channel();
 
     let texture = sync::Arc::new(texture_image);
+
     for face in model.faces.clone() {
         let tx = tx.clone();
         let tex = texture.clone();
@@ -90,24 +102,25 @@ fn main() {
                 fbv: Vec::with_capacity(1000),
                 zbv: Vec::with_capacity(1000),
             };
-            let mut image_face: Vec<Vector2<u32>> = Vec::with_capacity(3);
+            let mut face_cs: Vec<Vector3<f32>> = Vec::with_capacity(3);
+            let mut face_img: Vec<Vector2<u32>> = Vec::with_capacity(3);
             for vertex in &face.verts {
-                let (x, y) = common::screen_to_image_space(vertex.pos.x,
-                                                           vertex.pos.y,
-                                                           WINDOW_WIDTH,
-                                                           WINDOW_HEIGHT);
-                image_face.push(Vector2::new(x, y));
+                let v = view * vertex.pos.extend(1.0);
+                face_cs.push(v.truncate());
+                face_img.push(v.truncate().truncate().cast());
             }
-            let triangle = triangle::TriangleIterator::new(&image_face);
+            let triangle = triangle::TriangleIterator::new(&face_img);
             for line in triangle {
                 for point in line {
-                    let bary = match triangle::barycentric(point, &image_face) {
+                    let bary = match triangle::barycentric(Vector2::new(point.0 as f32,
+                                                                        point.1 as f32),
+                                                           &face_cs) {
                         Some(b) => b,
                         None => continue,
                     };
                     result.bi.push(common::xy(point.0, point.1, framebuffer_width));
-                    result.zbv.push(face.verts[0].pos.z * bary.x + face.verts[1].pos.z * bary.y +
-                                    face.verts[2].pos.z * bary.z);
+                    result.zbv.push(face_cs[0].z * bary.x + face_cs[1].z * bary.y +
+                                    face_cs[2].z * bary.z);
                     let texcoord = Vector2::<f32>::new(face.verts[0].texcoord.x * bary.x +
                                                        face.verts[1].texcoord.x * bary.y +
                                                        face.verts[2].texcoord.x * bary.z,
