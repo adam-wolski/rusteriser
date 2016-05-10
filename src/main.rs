@@ -105,7 +105,9 @@ fn main() {
             let mut face_cs: Vec<Vector3<f32>> = Vec::with_capacity(3);
             let mut face_img: Vec<Vector2<u32>> = Vec::with_capacity(3);
             for vertex in &face.verts {
-                let v = view * vertex.pos.extend(1.0);
+                let mut v = view * vertex.pos.extend(1.0);
+                v.x = v.x.round();
+                v.y = v.y.round();
                 face_cs.push(v.truncate());
                 face_img.push(v.truncate().truncate().cast());
             }
