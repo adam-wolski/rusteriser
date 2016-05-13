@@ -37,6 +37,19 @@ pub fn arr32_to_8(input: &[u32]) -> Vec<u8> {
     result
 }
 
+/// Convert buffer data `bf` with 32bit values to vector of 8bit values.
+/// Assumes that order of colors in buffer is BGRA but output will be converted to RGBA order.
+fn bf_to_image(bf: &[u32]) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::new();
+    for val in bf {
+        result.push((*val >> 16) as u8);
+        result.push((*val >> 8) as u8);
+        result.push(*val as u8);
+        result.push((*val >> 24) as u8);
+    }
+    result
+}
+
 /// Convert tuple of 8bit integers to one 32bit.
 /// Useful for packing colors in arrays.
 #[inline]
@@ -46,7 +59,7 @@ pub fn tup8_to_32(input: (u8, u8, u8, u8)) -> u32 {
 
 pub fn save_buffer_as_image(path: &Path, buffer: &[u32], width: u32, height: u32) {
     let clrtype = image::ColorType::RGBA(8);
-    image::save_buffer(path, arr32_to_8(buffer).as_ref(), width, height, clrtype).unwrap();
+    image::save_buffer(path, bf_to_image(buffer).as_ref(), width, height, clrtype).unwrap();
 }
 
 /// Convert screen (-1 to 1) coordinates to image space (0 - screen size) based on image
