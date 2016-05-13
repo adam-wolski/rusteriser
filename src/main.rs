@@ -17,7 +17,7 @@ pub mod window;
 pub mod line;
 pub mod model;
 pub mod color;
-pub mod common;
+pub mod utils;
 pub mod triangle;
 
 
@@ -30,8 +30,8 @@ use cgmath::*;
 use image::{Pixel, GenericImage};
 
 
-const WINDOW_WIDTH: u32 = 256;
-const WINDOW_HEIGHT: u32 = 256;
+const WINDOW_WIDTH: u32 = 1024;
+const WINDOW_HEIGHT: u32 = 1024;
 const CLIP_FAR: f32 = 99.0;
 const CLIP_NEAR: f32 = 0.0;
 
@@ -42,12 +42,12 @@ fn pixel_shader(light_dir: Vector3<f32>,
                 texture: &image::DynamicImage)
                 -> Vector4<f32> {
     let (texwidth, texheight) = texture.dimensions();
-    let (tx, ty) = common::texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
+    let (tx, ty) = utils::texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
     let t_clr = color::as_ranges(texture.get_pixel(tx, ty).channels4());
 
     let n = normal.normalize();
     let l = light_dir.normalize();
-    let ndotl = common::saturate(n.dot(l));
+    let ndotl = utils::saturate(n.dot(l));
 
     Vector4::new(t_clr.0 * ndotl, t_clr.1 * ndotl, t_clr.2 * ndotl, t_clr.3)
 }
@@ -69,7 +69,7 @@ fn main() {
     let framebuffer_width = WINDOW_WIDTH as usize;
     let mut zbuffer: Vec<f32> = vec![-99999999.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
 
-    let camera: Vector3<f32> = Vector3::new(0.0, 0.0, 3.0);
+    let camera: Vector3<f32> = Vector3::new(2.0, 0.0, 3.0);
     let camera_target: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
     let up: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
     let lightdir = Vector3::new(0.0, 0.0, 1.0);
@@ -145,7 +145,7 @@ fn main() {
                         Some(b) => b,
                         None => continue,
                     };
-                    result.bi.push(common::xy(point.0, point.1, framebuffer_width));
+                    result.bi.push(utils::xy(point.0, point.1, framebuffer_width));
                     result.zbv.push(face_cs[0].z * bary.x + face_cs[1].z * bary.y +
                                     face_cs[2].z * bary.z);
 
@@ -187,11 +187,11 @@ fn main() {
         }
     }
 
-    common::save_buffer_as_image(Path::new("./test_output/test.png"),
+    utils::save_buffer_as_image(Path::new("./test_output/test.png"),
                                  framebuffer.as_ref(),
                                  WINDOW_WIDTH,
                                  WINDOW_HEIGHT);
-    window.backbuffer_fill(&common::arr32_to_8(&framebuffer));
+    window.backbuffer_fill(&utils::arr32_to_8(&framebuffer));
     window.swap();
 
     while window.is_running() {
@@ -219,18 +219,18 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = common::screen_to_image_space(face.verts[i % 3].pos.x,
+                let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
                                                              face.verts[i % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
-                let (x1, y1) = common::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
+                let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
                                                              face.verts[(i + 1) % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
                 line::draw(x0, y0, x1, y1, color, &mut fb, fb_width);
             }
         }
-        common::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
+        utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
                                      &fb,
                                      WINDOW_WIDTH,
                                      WINDOW_HEIGHT);
@@ -245,21 +245,21 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = common::screen_to_image_space(face.verts[i % 3].pos.x,
+                let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
                                                              face.verts[i % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
-                let (x1, y1) = common::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
+                let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
                                                              face.verts[(i + 1) % 3].pos.y,
                                                              WINDOW_WIDTH,
                                                              WINDOW_HEIGHT);
                 let line = line::LineIterator::new(x0, y0, x1, y1);
                 for point in line {
-                    fb[common::xy(point.0, point.1, fb_width)] = color.bgra();
+                    fb[utils::xy(point.0, point.1, fb_width)] = color.bgra();
                 }
             }
         }
-        common::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
+        utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
                                      &fb,
                                      WINDOW_WIDTH,
                                      WINDOW_HEIGHT);
@@ -281,7 +281,7 @@ mod tests {
         b.iter(|| {
             let line = line::LineIterator::new(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
             for point in line {
-                fb[common::xy(point.0, point.1, fb_width)] = color.bgra();
+                fb[utils::xy(point.0, point.1, fb_width)] = color.bgra();
             }
         })
     }
@@ -296,7 +296,7 @@ mod tests {
         tri.push(Vector2::<u32>::new(0, WINDOW_HEIGHT));
         tri.push(Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
         b.iter(|| triangle::draw(&tri, color, &mut fb, fb_width));
-        common::save_buffer_as_image(Path::new("./test_output/bench_triangle.png"),
+        utils::save_buffer_as_image(Path::new("./test_output/bench_triangle.png"),
                                      &fb,
                                      WINDOW_WIDTH,
                                      WINDOW_HEIGHT);
@@ -316,11 +316,11 @@ mod tests {
             let triangle = triangle::TriangleIterator::new(&tri);
             for line in triangle {
                 for point in line {
-                    fb[common::xy(point.0, point.1, fb_width)] = color.bgra();
+                    fb[utils::xy(point.0, point.1, fb_width)] = color.bgra();
                 }
             }
         });
-        common::save_buffer_as_image(Path::new("./test_output/bench_triangle_iter.png"),
+        utils::save_buffer_as_image(Path::new("./test_output/bench_triangle_iter.png"),
                                      &fb,
                                      WINDOW_WIDTH,
                                      WINDOW_HEIGHT);

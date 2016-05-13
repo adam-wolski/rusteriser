@@ -1,7 +1,7 @@
 use cgmath::*;
 use line;
 use color;
-use common;
+use utils;
 
 
 /// Returns barycentric coordinates of point `point` in triangle `tri`.
@@ -159,7 +159,7 @@ pub fn draw(triangle: &[Vector2<u32>],
     for y in bb_min_y..(bb_max_y) {
         let line = line::LineIterator::new(bb_min_x, y, bb_max_x, y);
         for point in line.filter(|p| point_in_triangle(*p, triangle)) {
-            buffer[common::xy(point.0, point.1, buffer_width)] = color.bgra();
+            buffer[utils::xy(point.0, point.1, buffer_width)] = color.bgra();
         }
     }
 }

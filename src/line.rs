@@ -2,7 +2,7 @@
 
 use std::mem;
 use color;
-use common;
+use utils;
 
 
 /// Draw line using Bresenham algorithm.
@@ -53,7 +53,7 @@ pub fn draw(x0: u32,
     let mut e = 2 * d1 - d0;
     if swapped {
         for _ in 0..d0 {
-            buffer[common::xy(v0 as usize, v1 as usize, buffer_width)] = color.bgra();
+            buffer[utils::xy(v0 as usize, v1 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
                 v0 = v0 + dir0;
                 e = e - 2 * d0;
@@ -63,7 +63,7 @@ pub fn draw(x0: u32,
         }
     } else {
         for _ in 0..d0 {
-            buffer[common::xy(v1 as usize, v0 as usize, buffer_width)] = color.bgra();
+            buffer[utils::xy(v1 as usize, v0 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
                 v0 = v0 + dir0;
                 e = e - 2 * d0;

@@ -1,6 +1,6 @@
 //! Simple color structure.
 use cgmath::Vector4;
-use common;
+use utils;
 
 
 /// Represent color values as 0.0 - 1.0 ranges. For (u8, u8, u8, u8) tuple.
@@ -28,7 +28,7 @@ pub fn as_value(clr: Vector4<f32>) -> u32 {
                   (clr.x * 255.0).round().floor() as u8,
                   (clr.y * 255.0).round().floor() as u8,
                   (clr.z * 255.0).round().floor() as u8);
-    common::tup8_to_32(clr_u8)
+    utils::tup8_to_32(clr_u8)
 }
 
 
@@ -52,11 +52,11 @@ impl Color {
 
     /// u32 value with color bits in order blue, green, red, alpha.
     pub fn bgra(&self) -> u32 {
-        common::tup8_to_32((self.a, self.r, self.g, self.b))
+        utils::tup8_to_32((self.a, self.r, self.g, self.b))
     }
 
     pub fn rgba(&self) -> u32 {
-        common::tup8_to_32((self.a, self.b, self.g, self.r))
+        utils::tup8_to_32((self.a, self.b, self.g, self.r))
     }
 
     pub fn white() -> Color {
