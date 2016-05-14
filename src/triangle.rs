@@ -107,7 +107,7 @@ fn point_in_triangle(point: (usize, usize), triangle: &[Vector2<u32>]) -> bool {
         return false;
     }
 
-    if naive_point_in_triangle(point, &triangle) {
+    if naive_point_in_triangle(point, triangle) {
         return true;
     }
     if distance_square_point_to_segment(x1, y1, x2, y2, x, y) <= EPSILON_SQUARE {
