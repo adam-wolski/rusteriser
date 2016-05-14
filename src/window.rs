@@ -7,6 +7,7 @@ pub struct Window<'a> {
     buffer_texture: sdl2::render::Texture,
     backbuffer: Vec<u8>,
     width: u32,
+    height: u32,
 }
 
 impl<'a> Window<'a> {
@@ -35,6 +36,7 @@ impl<'a> Window<'a> {
             renderer: renderer,
             buffer_texture: bt,
             width: width,
+            height: height,
             backbuffer: backbuffer,
         }
     }
@@ -79,5 +81,9 @@ impl<'a> Window<'a> {
 
         }
         running
+    }
+
+    pub fn dimensions(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 }
