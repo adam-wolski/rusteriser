@@ -19,11 +19,10 @@ pub mod model;
 pub mod color;
 pub mod utils;
 pub mod triangle;
+pub mod gl;
 
 
 use std::path::Path;
-use std::time;
-use std::thread;
 use std::sync;
 
 use cgmath::*;
@@ -32,18 +31,29 @@ use image::{Pixel, GenericImage};
 
 const WINDOW_WIDTH: u32 = 1024;
 const WINDOW_HEIGHT: u32 = 1024;
-const CLIP_FAR: f32 = 99.0;
-const CLIP_NEAR: f32 = 0.0;
 
 
-fn pixel_shader(light_dir: Vector3<f32>,
-                normal: Vector3<f32>,
-                texcoord: Vector2<f32>,
-                texture: &image::DynamicImage)
-                -> Vector4<f32> {
+fn vertex_shader(inputs: gl::VSInput) -> gl::VSOutput {
+    let v4 = inputs.position;
+    let v_s_v = inputs.view * v4;
+    let c_s_v = inputs.projection * v_s_v;
+    
+    let mut output: gl::VSOutput = gl::VSOutput::default();
+    output.position = c_s_v;
+    output.texcoord = inputs.texcoord;
+    output.normal = inputs.normal;
+    output
+}
+
+fn pixel_shader(inputs: gl::PSInput) -> Vector4<f32> {
+    let texture = inputs.tex0.unwrap();
+    let texcoord = inputs.texcoord;
+    let normal = inputs.normal;
+    let light_dir = inputs.light_pos;
+
     let (texwidth, texheight) = texture.dimensions();
     let (tx, ty) = utils::texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
-    let t_clr = color::as_ranges(texture.get_pixel(tx, ty).channels4());
+    let t_clr = color::tup8_as_ranges(texture.get_pixel(tx, ty).channels4());
 
     let n = normal.normalize();
     let l = light_dir.normalize();
@@ -53,51 +63,19 @@ fn pixel_shader(light_dir: Vector3<f32>,
 }
 
 
-/// Results returned from threads run per face.
-struct FaceThreadResult {
-    pub bi: Vec<usize>, // Buffer index
-    pub fbv: Vec<u32>, // Frame buffer values
-    pub zbv: Vec<f32>, // Z Buffer values
-}
-
-
 fn main() {
     env_logger::init().unwrap();
 
-    let mut window = window::Window::new("Rusteriser", WINDOW_WIDTH, WINDOW_HEIGHT);
-    let mut framebuffer: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
-    let framebuffer_width = WINDOW_WIDTH as usize;
-    let mut zbuffer: Vec<f32> = vec![-99999999.0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
+    let mut graphics: gl::Gl = gl::Gl::new(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     let camera: Vector3<f32> = Vector3::new(2.0, 0.0, 3.0);
     let camera_target: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
     let up: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
-    let lightdir = Vector3::new(0.0, 0.0, 1.0);
+    let light_pos = Vector3::new(0.0, 0.0, 1.0);
 
-    // view matrix which transforms from world space to view space.
-    let z_axis = (camera - camera_target).normalize();
-    let x_axis = (up.cross(z_axis)).normalize();
-    let y_axis = z_axis.cross(x_axis);
-    let view: Matrix4<f32> = Matrix4::from_cols(Vector4::new(x_axis.x, y_axis.x, z_axis.x, 0.0),
-                                                Vector4::new(x_axis.y, y_axis.y, z_axis.y, 0.0),
-                                                Vector4::new(x_axis.z, y_axis.z, z_axis.z, 0.0),
-                                                Vector4::new(-x_axis.dot(camera),
-                                                             -y_axis.dot(camera),
-                                                             -z_axis.dot(camera),
-                                                             1.0));
-
-
+    let view = gl::view_matrix(camera, camera_target, up);
     let mut projection: Matrix4<f32> = Matrix4::identity();
     projection[2][3] = -1.0 / camera.z;
-
-    // Construct viewport transformation matrix which translates ndc to screen/window coordinates.
-    let mut viewport: Matrix4<f32> = Matrix4::identity();
-    viewport[0][0] = (WINDOW_WIDTH - 1) as f32 / 2.0;
-    viewport[1][1] = (WINDOW_HEIGHT - 1) as f32 / 2.0;
-    viewport[2][2] = (CLIP_FAR - CLIP_NEAR) / 2.0;
-    viewport[3][0] = (WINDOW_WIDTH - 1) as f32 / 2.0;
-    viewport[3][1] = (WINDOW_HEIGHT - 1) as f32 / 2.0;
-    viewport[3][2] = (CLIP_NEAR + CLIP_FAR) / 2.0;
 
     let modelpath = Path::new("./content/african_head/african_head.obj");
     // let modelpath = Path::new("./content/box.obj");
@@ -106,97 +84,19 @@ fn main() {
     let texture_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
     let texture = sync::Arc::new(texture_image);
 
-    let (tx, rx) = sync::mpsc::channel();
+    let mut vs_in: gl::VSInput = gl::VSInput::default();
+    vs_in.view = view;
+    vs_in.projection = projection;
+    vs_in.camera = camera;
+    vs_in.camera_target = camera_target;
 
-    for face in model.faces.clone() {
-        let tx = tx.clone();
-        let tex = texture.clone();
-        thread::spawn(move || {
-            let mut result = FaceThreadResult {
-                bi: Vec::with_capacity(1000),
-                fbv: Vec::with_capacity(1000),
-                zbv: Vec::with_capacity(1000),
-            };
+    let mut ps_in: gl::PSInput = gl::PSInput::default();
+    ps_in.tex0 = Some(texture.clone());
+    ps_in.light_pos = light_pos;
 
-            let mut face_cs: Vec<Vector3<f32>> = Vec::with_capacity(3);
-            let mut face_img: Vec<Vector2<u32>> = Vec::with_capacity(3);
-            for vertex in &face.verts {
-                let v4 = vertex.pos.extend(1.0);
-                let v_s_v = view * v4;
-                let c_s_v = projection * v_s_v;
-                let ndc_v = Vector4::<f32>::new(c_s_v.x / c_s_v.w,
-                                                c_s_v.y / c_s_v.w,
-                                                c_s_v.z / c_s_v.w,
-                                                1.0);
-                let s_s_v = viewport * ndc_v;
-                let mut v3: Vector3<f32> = s_s_v.truncate();
-                v3.x = v3.x.round();
-                v3.y = v3.y.round();
-                face_cs.push(v3);
-                face_img.push(v3.truncate().cast());
-            }
-
-            let triangle = triangle::TriangleIterator::new(&face_img);
-            for line in triangle {
-                for point in line {
-                    let bary = match triangle::barycentric(Vector2::new(point.0 as f32,
-                                                                        point.1 as f32),
-                                                           &face_cs) {
-                        Some(b) => b,
-                        None => continue,
-                    };
-                    result.bi.push(utils::xy(point.0, point.1, framebuffer_width));
-                    result.zbv.push(face_cs[0].z * bary.x + face_cs[1].z * bary.y +
-                                    face_cs[2].z * bary.z);
-
-                    let texcoord = Vector2::<f32>::new(face.verts[0].texcoord.x * bary.x +
-                                                       face.verts[1].texcoord.x * bary.y +
-                                                       face.verts[2].texcoord.x * bary.z,
-                                                       face.verts[0].texcoord.y * bary.x +
-                                                       face.verts[1].texcoord.y * bary.y +
-                                                       face.verts[2].texcoord.y * bary.z);
-                    let normal = Vector3::<f32>::new(face.verts[0].normal.x * bary.x +
-                                                     face.verts[1].normal.x * bary.y +
-                                                     face.verts[2].normal.x * bary.z,
-                                                     face.verts[0].normal.y * bary.x +
-                                                     face.verts[1].normal.y * bary.y +
-                                                     face.verts[2].normal.y * bary.z,
-                                                     face.verts[0].normal.z * bary.x +
-                                                     face.verts[1].normal.z * bary.y +
-                                                     face.verts[2].normal.z * bary.z);
-
-                    let pixel_color = pixel_shader(lightdir, normal, texcoord, &tex);
-                    result.fbv.push(color::as_value(pixel_color));
-                    result.fbv.push(color::as_value(pixel_color));
-                }
-            }
-            tx.send(result).unwrap();
-        });
-    }
-
-    for _ in 0..model.faces.len() {
-        let result: FaceThreadResult = rx.recv().unwrap();
-        for i in 0..result.bi.len() {
-            let bi = result.bi[i];
-            let z_b_v = result.zbv[i];
-            let f_b_v = result.fbv[i];
-            if z_b_v >= zbuffer[bi] {
-                framebuffer[bi] = f_b_v;
-                zbuffer[bi] = z_b_v;
-            }
-        }
-    }
-
-    utils::save_buffer_as_image(Path::new("./test_output/test.png"),
-                                 framebuffer.as_ref(),
-                                 WINDOW_WIDTH,
-                                 WINDOW_HEIGHT);
-    window.backbuffer_fill(&utils::arr32_to_8(&framebuffer));
-    window.swap();
-
-    while window.is_running() {
-        thread::sleep(time::Duration::from_secs(1));
-    }
+    graphics.draw(&model, vertex_shader, vs_in, pixel_shader, ps_in);
+    graphics.save_framebuffer_as_image(Path::new("./test_output/test.png"));
+    graphics.present();
 }
 
 
