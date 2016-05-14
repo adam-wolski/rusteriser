@@ -10,6 +10,6 @@ env_logger = '*'
 clippy = '*'
 sdl2 = '*'
 tobj = '*'
-cgmath = '*'
-image = "0.8.0"
+cgmath = '0.9.1'
+image = {version = '*', default-features = false, features = ["png_codec", "tga"]}
 rand = '*'
