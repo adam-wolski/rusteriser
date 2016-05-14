@@ -55,21 +55,21 @@ pub fn draw(x0: u32,
         for _ in 0..d0 {
             buffer[utils::xy(v0 as usize, v1 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
-                v0 = v0 + dir0;
-                e = e - 2 * d0;
+                v0 += dir0;
+                e -= 2 * d0;
             }
-            v1 = v1 + dir1;
-            e = e + 2 * d1;
+            v1 += dir1;
+            e += 2 * d1;
         }
     } else {
         for _ in 0..d0 {
             buffer[utils::xy(v1 as usize, v0 as usize, buffer_width)] = color.bgra();
             while e >= 0 {
-                v0 = v0 + dir0;
-                e = e - 2 * d0;
+                v0 += dir0;
+                e -= 2 * d0;
             }
-            v1 = v1 + dir1;
-            e = e + 2 * d1;
+            v1 += dir1;
+            e += 2 * d1;
         }
     }
 }
@@ -160,12 +160,12 @@ impl Iterator for LineIterator {
         }
 
         while self.e >= 0 {
-            self.v0 = self.v0 + self.dir0;
-            self.e = self.e - 2 * self.d0
+            self.v0 += self.dir0;
+            self.e -= 2 * self.d0
         }
 
-        self.v1 = self.v1 + self.dir1;
-        self.e = self.e + 2 * self.d1;
+        self.v1 += self.dir1;
+        self.e += 2 * self.d1;
 
         self.count += 1;
 
