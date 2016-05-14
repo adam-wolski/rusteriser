@@ -1,5 +1,20 @@
 use std::path::Path;
 use image;
+use cgmath::*;
+
+
+#[inline]
+pub fn vector3_interpolate(v: &[Vector3<f32>], inter: &Vector3<f32>) -> Vector3<f32> {
+    Vector3::new(v[0].x * inter.x + v[1].x * inter.y + v[2].x * inter.z,
+                 v[0].y * inter.x + v[1].y * inter.y + v[2].y * inter.z,
+                 v[0].z * inter.x + v[1].z * inter.y + v[2].z * inter.z)
+}
+
+#[inline]
+pub fn vector2_interpolate(v: &[Vector2<f32>], inter: &Vector3<f32>) -> Vector2<f32> {
+    Vector2::new(v[0].x * inter.x + v[1].x * inter.y + v[2].x * inter.z,
+                 v[0].y * inter.x + v[1].y * inter.y + v[2].y * inter.z)
+}
 
 /// Get 1D position from 2D coordinates.
 /// Useful for setting/getting point in buffer.
