@@ -34,7 +34,10 @@ impl Model {
     pub fn load(path: &path::Path) -> Result<Model, ModelError> {
         let (models, _) = match tobj::load_obj(path) {
             Ok(model_and_mats) => model_and_mats,
-            Err(_) => return Err(ModelError::CouldNotLoadFile),
+            Err(e) => {
+                error!("{:?}", e);
+                return Err(ModelError::CouldNotLoadFile);
+            },
         };
         // TODO: We assume it's just one model for now.
         let mesh: &tobj::Mesh = &models[0].mesh;

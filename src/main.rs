@@ -20,6 +20,7 @@ pub mod color;
 pub mod utils;
 pub mod triangle;
 pub mod gl;
+pub mod shaders;
 
 
 use std::path::Path;
@@ -30,48 +31,6 @@ use cgmath::*;
 
 const WINDOW_WIDTH: u32 = 1024;
 const WINDOW_HEIGHT: u32 = 1024;
-
-
-fn vertex_shader(inputs: gl::VSInput) -> gl::VSOutput {
-    let mut output: gl::VSOutput = gl::VSOutput::default();
-    output.position = inputs.projection * inputs.view * inputs.position;
-    output.texcoord = inputs.texcoord;
-    output.normal = inputs.normal;
-    output
-}
-
-
-fn pixel_shader(inputs: gl::PSInput) -> Vector4<f32> {
-    let texcoord = inputs.texcoord;
-    let normal = inputs.normal;
-    let light_dir = inputs.light_pos;
-    let cam_dir = inputs.cam_dir;
-
-    let diffuse_tex = utils::sample(&inputs.textures[0], texcoord);
-    let normals_tex = utils::sample(&inputs.textures[1], texcoord).truncate();
-    let specular_tex = utils::sample(&inputs.textures[2], texcoord).truncate();
-
-    let nrm: Vector3<f32> = Vector3::new(normal.x * normals_tex.x,
-                                         normal.y * normals_tex.y,
-                                         normal.z * normals_tex.z);
-
-    let n = nrm.normalize();
-    let l = light_dir.normalize();
-    let r = utils::reflect(-l, n);
-    let e = cam_dir.normalize();
-    let ndotl = utils::saturate(n.dot(l));
-    let edotr = utils::saturate(e.dot(r));
-
-    let mut spec = specular_tex * edotr;
-    spec.x = spec.x.powf(5.0);
-    spec.y = spec.y.powf(5.0);
-    spec.z = spec.z.powf(5.0);
-
-    let mut ambient = diffuse_tex * 0.1;
-    ambient.z *= 1.5;
-
-    utils::saturate_v4(ambient + (diffuse_tex * ndotl) + spec.extend(0.0))
-}
 
 
 fn main() {
@@ -88,16 +47,16 @@ fn main() {
     let mut projection: Matrix4<f32> = Matrix4::identity();
     projection[2][3] = -0.5 / camera.z;
 
-    let modelpath = Path::new("./content/african_head/african_head.obj");
+    let head_modelpath = Path::new("./content/african_head/african_head.obj");
     // let modelpath = Path::new("./content/box.obj");
-    let model = model::Model::load(modelpath).unwrap();
+    let head_model = model::Model::load(head_modelpath).unwrap();
 
-    let diffuse_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
-    let diffuse_tex = sync::Arc::new(diffuse_image);
-    let normals_image = image::open("./content/african_head/african_head_nm.tga").unwrap();
-    let normals_tex = sync::Arc::new(normals_image);
-    let specular_image = image::open("./content/african_head/african_head_spec.tga").unwrap();
-    let specular_tex = sync::Arc::new(specular_image);
+    let head_diffuse_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
+    let head_diffuse_tex = sync::Arc::new(head_diffuse_image);
+    let head_normals_image = image::open("./content/african_head/african_head_nm.tga").unwrap();
+    let head_normals_tex = sync::Arc::new(head_normals_image);
+    let head_specular_image = image::open("./content/african_head/african_head_spec.tga").unwrap();
+    let head_specular_tex = sync::Arc::new(head_specular_image);
 
     let mut vs_in: gl::VSInput = gl::VSInput::default();
     vs_in.view = view;
@@ -106,13 +65,31 @@ fn main() {
     vs_in.camera_target = camera_target;
 
     let mut ps_in: gl::PSInput = gl::PSInput::default();
-    ps_in.textures.push(diffuse_tex.clone());
-    ps_in.textures.push(normals_tex.clone());
-    ps_in.textures.push(specular_tex.clone());
+    ps_in.textures.push(head_diffuse_tex.clone());
+    ps_in.textures.push(head_normals_tex.clone());
+    ps_in.textures.push(head_specular_tex.clone());
     ps_in.light_pos = light_pos;
     ps_in.cam_dir = camera - camera_target;
 
-    graphics.draw(&model, vertex_shader, vs_in, pixel_shader, ps_in);
+    graphics.draw(&head_model, shaders::simple_vertex, vs_in, shaders::spec_pixel, ps_in.clone());
+
+    let ei_modelpath = Path::new("./content/african_head/african_head_eye_inner.obj");
+    let ei_model = model::Model::load(ei_modelpath).unwrap();
+
+    let ei_diffuse_image = image::open("./content/african_head/african_head_eye_inner_diffuse2.tga").unwrap();
+    let ei_diffuse_tex = sync::Arc::new(ei_diffuse_image);
+    let ei_normals_image = image::open("./content/african_head/african_head_eye_inner_nm.tga").unwrap();
+    let ei_normals_tex = sync::Arc::new(ei_normals_image);
+    let ei_specular_image = image::open("./content/african_head/african_head_eye_inner_spec.tga").unwrap();
+    let ei_specular_tex = sync::Arc::new(ei_specular_image);
+
+    ps_in.textures.clear();
+    ps_in.textures.push(ei_diffuse_tex);
+    ps_in.textures.push(ei_normals_tex);
+    ps_in.textures.push(ei_specular_tex);
+
+    graphics.draw(&ei_model, shaders::simple_vertex, vs_in, shaders::spec_pixel, ps_in);
+
     graphics.save_framebuffer_as_image(Path::new("./test_output/test.png"));
     graphics.present();
 }
