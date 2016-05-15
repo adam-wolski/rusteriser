@@ -1,6 +1,21 @@
 use std::path::Path;
-use image;
+use image::{self, Pixel, GenericImage};
 use cgmath::*;
+use color;
+
+#[inline]
+pub fn reflect(i: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
+    i - 2.0 * n.dot(i) * n
+}
+
+
+#[inline]
+pub fn sample(texture: &image::DynamicImage, texcoord: Vector2<f32>) -> Vector4<f32> {
+    let (texwidth, texheight) = texture.dimensions();
+    let (tx, ty) = texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
+    let t_clr = color::tup8_as_ranges(texture.get_pixel(tx, ty).channels4());
+    Vector4::new(t_clr.0, t_clr.1, t_clr.2, t_clr.3)
+}
 
 
 #[inline]
@@ -37,6 +52,16 @@ pub fn clamp(v: f32, min: f32, max: f32) -> f32 {
 #[inline]
 pub fn saturate(v: f32) -> f32 {
     clamp(v, 0.0, 1.0)
+}
+
+#[inline]
+pub fn saturate_v3(v: Vector3<f32>) -> Vector3<f32> {
+    vec3(saturate(v.x), saturate(v.y), saturate(v.z))
+}
+
+#[inline]
+pub fn saturate_v4(v: Vector4<f32>) -> Vector4<f32> {
+    vec4(saturate(v.x), saturate(v.y), saturate(v.z), saturate(v.w))
 }
 
 /// Convert array of 32 bit unsigned integers to 8 bit one.

@@ -54,7 +54,7 @@ pub struct VSOutput {
 impl Default for VSOutput {
     fn default() -> VSOutput {
         VSOutput {
-            position: Vector4::new(0.0, 0.0, 0.0, 0.0),
+            position: Vector4::new(0.0, 0.0, 0.0, 1.0),
             normal: Vector4::new(1.0, 1.0, 1.0, 0.0),
             texcoord: Vector2::new(0.0, 0.0),
         }
@@ -63,8 +63,9 @@ impl Default for VSOutput {
 
 #[derive(Clone)]
 pub struct PSInput {
-    pub tex0: Option<sync::Arc<image::DynamicImage>>,
+    pub textures: Vec<sync::Arc<image::DynamicImage>>,
     pub light_pos: Vector3<f32>,
+    pub cam_dir: Vector3<f32>,
     pub position: Vector3<f32>,
     pub normal: Vector3<f32>,
     pub texcoord: Vector2<f32>,
@@ -73,10 +74,11 @@ pub struct PSInput {
 impl Default for PSInput {
     fn default() -> PSInput {
         PSInput {
-            tex0: None,
+            textures: Vec::new(),
             light_pos: Vector3::new(0.0, 0.0, 0.0),
+            cam_dir: Vector3::new(0.0, 0.0, 1.0),
             position: Vector3::new(0.0, 0.0, 0.0),
-            normal: Vector3::new(0.0, 0.0, 0.0),
+            normal: Vector3::new(1.0, 1.0, 1.0),
             texcoord: Vector2::new(0.0, 0.0),
         }
     }
@@ -98,6 +100,18 @@ pub fn view_matrix(camera: Vector3<f32>,
                                     -y_axis.dot(camera),
                                     -z_axis.dot(camera),
                                     1.0))
+}
+
+pub fn projection_matrix(fovy: f32) -> Matrix4<f32> {
+    let d = 1.0 / (fovy.tan() / 2.0);
+    let aspect_ratio = 1.0;
+    let mut projection = Matrix4::identity();
+    projection[0][0] = d / aspect_ratio;
+    projection[1][1] = d;
+    projection[2][2] = (CLIP_NEAR + CLIP_FAR) / (CLIP_NEAR - CLIP_FAR);
+    projection[3][2] = 2.0 * CLIP_NEAR * CLIP_FAR / (CLIP_NEAR - CLIP_FAR);
+    projection[2][3] = -1.0;
+    projection
 }
 
 /// Construct viewport transformation matrix which translates ndc to screen/window coordinates.
@@ -243,10 +257,7 @@ impl<'a> Gl<'a> {
 
     pub fn save_framebuffer_as_image(&self, path: &path::Path) {
         let (window_width, window_height) = self.window.dimensions();
-        utils::save_buffer_as_image(path,
-                                    &self.fb,
-                                    window_width,
-                                    window_height);
+        utils::save_buffer_as_image(path, &self.fb, window_width, window_height);
     }
 
     pub fn present(&mut self) {

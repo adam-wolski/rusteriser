@@ -26,7 +26,6 @@ use std::path::Path;
 use std::sync;
 
 use cgmath::*;
-use image::{Pixel, GenericImage};
 
 
 const WINDOW_WIDTH: u32 = 1024;
@@ -34,32 +33,44 @@ const WINDOW_HEIGHT: u32 = 1024;
 
 
 fn vertex_shader(inputs: gl::VSInput) -> gl::VSOutput {
-    let v4 = inputs.position;
-    let v_s_v = inputs.view * v4;
-    let c_s_v = inputs.projection * v_s_v;
-    
     let mut output: gl::VSOutput = gl::VSOutput::default();
-    output.position = c_s_v;
+    output.position = inputs.projection * inputs.view * inputs.position;
     output.texcoord = inputs.texcoord;
     output.normal = inputs.normal;
     output
 }
 
+
 fn pixel_shader(inputs: gl::PSInput) -> Vector4<f32> {
-    let texture = inputs.tex0.unwrap();
     let texcoord = inputs.texcoord;
     let normal = inputs.normal;
     let light_dir = inputs.light_pos;
+    let cam_dir = inputs.cam_dir;
 
-    let (texwidth, texheight) = texture.dimensions();
-    let (tx, ty) = utils::texcoord_to_image_space(texcoord.x, texcoord.y, texwidth, texheight);
-    let t_clr = color::tup8_as_ranges(texture.get_pixel(tx, ty).channels4());
+    let diffuse_tex = utils::sample(&inputs.textures[0], texcoord);
+    let normals_tex = utils::sample(&inputs.textures[1], texcoord).truncate();
+    let specular_tex = utils::sample(&inputs.textures[2], texcoord).truncate();
 
-    let n = normal.normalize();
+    let nrm: Vector3<f32> = Vector3::new(normal.x * normals_tex.x,
+                                         normal.y * normals_tex.y,
+                                         normal.z * normals_tex.z);
+
+    let n = nrm.normalize();
     let l = light_dir.normalize();
+    let r = utils::reflect(-l, n);
+    let e = cam_dir.normalize();
     let ndotl = utils::saturate(n.dot(l));
+    let edotr = utils::saturate(e.dot(r));
 
-    Vector4::new(t_clr.0 * ndotl, t_clr.1 * ndotl, t_clr.2 * ndotl, t_clr.3)
+    let mut spec = specular_tex * edotr;
+    spec.x = spec.x.powf(5.0);
+    spec.y = spec.y.powf(5.0);
+    spec.z = spec.z.powf(5.0);
+
+    let mut ambient = diffuse_tex * 0.1;
+    ambient.z *= 1.5;
+
+    utils::saturate_v4(ambient + (diffuse_tex * ndotl) + spec.extend(0.0))
 }
 
 
@@ -75,14 +86,18 @@ fn main() {
 
     let view = gl::view_matrix(camera, camera_target, up);
     let mut projection: Matrix4<f32> = Matrix4::identity();
-    projection[2][3] = -1.0 / camera.z;
+    projection[2][3] = -0.5 / camera.z;
 
     let modelpath = Path::new("./content/african_head/african_head.obj");
     // let modelpath = Path::new("./content/box.obj");
     let model = model::Model::load(modelpath).unwrap();
 
-    let texture_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
-    let texture = sync::Arc::new(texture_image);
+    let diffuse_image = image::open("./content/african_head/african_head_diffuse.tga").unwrap();
+    let diffuse_tex = sync::Arc::new(diffuse_image);
+    let normals_image = image::open("./content/african_head/african_head_nm.tga").unwrap();
+    let normals_tex = sync::Arc::new(normals_image);
+    let specular_image = image::open("./content/african_head/african_head_spec.tga").unwrap();
+    let specular_tex = sync::Arc::new(specular_image);
 
     let mut vs_in: gl::VSInput = gl::VSInput::default();
     vs_in.view = view;
@@ -91,8 +106,11 @@ fn main() {
     vs_in.camera_target = camera_target;
 
     let mut ps_in: gl::PSInput = gl::PSInput::default();
-    ps_in.tex0 = Some(texture.clone());
+    ps_in.textures.push(diffuse_tex.clone());
+    ps_in.textures.push(normals_tex.clone());
+    ps_in.textures.push(specular_tex.clone());
     ps_in.light_pos = light_pos;
+    ps_in.cam_dir = camera - camera_target;
 
     graphics.draw(&model, vertex_shader, vs_in, pixel_shader, ps_in);
     graphics.save_framebuffer_as_image(Path::new("./test_output/test.png"));
@@ -120,20 +138,20 @@ mod tests {
         for face in &testmodel.faces {
             for i in 0..3 {
                 let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
-                                                             face.verts[i % 3].pos.y,
-                                                             WINDOW_WIDTH,
-                                                             WINDOW_HEIGHT);
+                                                            face.verts[i % 3].pos.y,
+                                                            WINDOW_WIDTH,
+                                                            WINDOW_HEIGHT);
                 let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
-                                                             face.verts[(i + 1) % 3].pos.y,
-                                                             WINDOW_WIDTH,
-                                                             WINDOW_HEIGHT);
+                                                            face.verts[(i + 1) % 3].pos.y,
+                                                            WINDOW_WIDTH,
+                                                            WINDOW_HEIGHT);
                 line::draw(x0, y0, x1, y1, color, &mut fb, fb_width);
             }
         }
         utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
-                                     &fb,
-                                     WINDOW_WIDTH,
-                                     WINDOW_HEIGHT);
+                                    &fb,
+                                    WINDOW_WIDTH,
+                                    WINDOW_HEIGHT);
     }
 
     #[test]
@@ -146,13 +164,13 @@ mod tests {
         for face in &testmodel.faces {
             for i in 0..3 {
                 let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
-                                                             face.verts[i % 3].pos.y,
-                                                             WINDOW_WIDTH,
-                                                             WINDOW_HEIGHT);
+                                                            face.verts[i % 3].pos.y,
+                                                            WINDOW_WIDTH,
+                                                            WINDOW_HEIGHT);
                 let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
-                                                             face.verts[(i + 1) % 3].pos.y,
-                                                             WINDOW_WIDTH,
-                                                             WINDOW_HEIGHT);
+                                                            face.verts[(i + 1) % 3].pos.y,
+                                                            WINDOW_WIDTH,
+                                                            WINDOW_HEIGHT);
                 let line = line::LineIterator::new(x0, y0, x1, y1);
                 for point in line {
                     fb[utils::xy(point.0, point.1, fb_width)] = color.bgra();
@@ -160,9 +178,9 @@ mod tests {
             }
         }
         utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
-                                     &fb,
-                                     WINDOW_WIDTH,
-                                     WINDOW_HEIGHT);
+                                    &fb,
+                                    WINDOW_WIDTH,
+                                    WINDOW_HEIGHT);
     }
 
     #[bench]
@@ -197,9 +215,9 @@ mod tests {
         tri.push(Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
         b.iter(|| triangle::draw(&tri, color, &mut fb, fb_width));
         utils::save_buffer_as_image(Path::new("./test_output/bench_triangle.png"),
-                                     &fb,
-                                     WINDOW_WIDTH,
-                                     WINDOW_HEIGHT);
+                                    &fb,
+                                    WINDOW_WIDTH,
+                                    WINDOW_HEIGHT);
     }
 
     #[bench]
@@ -221,8 +239,8 @@ mod tests {
             }
         });
         utils::save_buffer_as_image(Path::new("./test_output/bench_triangle_iter.png"),
-                                     &fb,
-                                     WINDOW_WIDTH,
-                                     WINDOW_HEIGHT);
+                                    &fb,
+                                    WINDOW_WIDTH,
+                                    WINDOW_HEIGHT);
     }
 }
