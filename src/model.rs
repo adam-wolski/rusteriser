@@ -37,7 +37,7 @@ impl Model {
             Err(e) => {
                 error!("{:?}", e);
                 return Err(ModelError::CouldNotLoadFile);
-            },
+            }
         };
         // TODO: We assume it's just one model for now.
         let mesh: &tobj::Mesh = &models[0].mesh;

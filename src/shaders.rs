@@ -55,4 +55,3 @@ pub fn spec_pixel(inputs: gl::PSInput) -> Vector4<f32> {
 
     utils::saturate_v4(ambient + (diffuse_tex * ndotl) + spec.extend(0.0))
 }
-
