@@ -122,7 +122,7 @@ pub fn viewport_matrix(window_dimensions: (u32, u32),
     let mut viewport: Matrix4<f32> = Matrix4::identity();
     let (window_width, window_height) = window_dimensions;
     viewport[0][0] = (window_width - 1) as f32 / 2.0;
-    viewport[1][1] = (window_height - 1) as f32 / 2.0;
+    viewport[1][1] = -1.0 * (window_height - 1) as f32 / 2.0;
     viewport[2][2] = (clip_far - clip_near) / 2.0;
     viewport[3][0] = (window_width - 1) as f32 / 2.0;
     viewport[3][1] = (window_height - 1) as f32 / 2.0;
