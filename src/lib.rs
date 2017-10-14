@@ -3,7 +3,6 @@
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-extern crate sdl2;
 extern crate tobj;
 extern crate cgmath;
 extern crate image;
