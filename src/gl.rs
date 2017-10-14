@@ -1,11 +1,9 @@
 use std::sync;
 use std::path;
 use std::thread;
-use std::time;
 
 use cgmath::*;
 
-use window;
 use image;
 use model;
 use triangle;
@@ -119,19 +117,19 @@ pub fn projection_matrix(fovy: f32) -> Matrix4<f32> {
     projection
 }
 
-/// Construct viewport transformation matrix which translates ndc to screen/window coordinates.
+/// Construct viewport transformation matrix which translates ndc to screen/viewport coordinates.
 pub fn viewport_matrix(
-    window_dimensions: (u32, u32),
+    viewport_dimensions: (u32, u32),
     clip_near: f32,
     clip_far: f32,
 ) -> Matrix4<f32> {
     let mut viewport: Matrix4<f32> = Matrix4::identity();
-    let (window_width, window_height) = window_dimensions;
-    viewport[0][0] = (window_width - 1) as f32 / 2.0;
-    viewport[1][1] = -1.0 * (window_height - 1) as f32 / 2.0;
+    let (viewport_width, viewport_height) = viewport_dimensions;
+    viewport[0][0] = (viewport_width - 1) as f32 / 2.0;
+    viewport[1][1] = -1.0 * (viewport_height - 1) as f32 / 2.0;
     viewport[2][2] = (clip_far - clip_near) / 2.0;
-    viewport[3][0] = (window_width - 1) as f32 / 2.0;
-    viewport[3][1] = (window_height - 1) as f32 / 2.0;
+    viewport[3][0] = (viewport_width - 1) as f32 / 2.0;
+    viewport[3][1] = (viewport_height - 1) as f32 / 2.0;
     viewport[3][2] = (clip_near + clip_far) / 2.0;
     viewport
 }
@@ -145,21 +143,20 @@ struct FaceThreadResult {
 }
 
 
-pub struct Gl<'a> {
-    window: window::Window<'a>,
+pub struct Gl {
+    viewport_dimensions: (u32, u32),
     fb: Vec<u32>,
     fb_width: usize,
     zb: Vec<f32>,
 }
 
-impl<'a> Gl<'a> {
-    pub fn new(window_width: u32, window_height: u32) -> Gl<'a> {
-        let window = window::Window::new("Rusteriser", window_width, window_height);
-        let framebuffer: Vec<u32> = vec![0; (window_width * window_height) as usize];
-        let framebuffer_width = window_width as usize;
-        let zbuffer: Vec<f32> = vec![-99999999.0; (window_width * window_height) as usize];
+impl Gl {
+    pub fn new(viewport_width: u32, viewport_height: u32) -> Gl {
+        let framebuffer: Vec<u32> = vec![0; (viewport_width * viewport_height) as usize];
+        let framebuffer_width = viewport_width as usize;
+        let zbuffer: Vec<f32> = vec![-99999999.0; (viewport_width * viewport_height) as usize];
         Gl {
-            window: window,
+            viewport_dimensions: (viewport_width, viewport_height),
             fb: framebuffer,
             fb_width: framebuffer_width,
             zb: zbuffer,
@@ -178,7 +175,7 @@ impl<'a> Gl<'a> {
         P: Fn(PSInput) -> Vector4<f32> + Send + Copy + 'static,
     {
 
-        let viewport: Matrix4<f32> = viewport_matrix(self.window.dimensions(), CLIP_NEAR, CLIP_FAR);
+        let viewport: Matrix4<f32> = viewport_matrix(self.viewport_dimensions, CLIP_NEAR, CLIP_FAR);
 
         let (tx, rx) = sync::mpsc::channel();
         let fb_width = self.fb_width;
@@ -269,16 +266,7 @@ impl<'a> Gl<'a> {
     }
 
     pub fn save_framebuffer_as_image(&self, path: &path::Path) {
-        let (window_width, window_height) = self.window.dimensions();
+        let (window_width, window_height) = self.viewport_dimensions;
         utils::save_buffer_as_image(path, &self.fb, window_width, window_height);
-    }
-
-    pub fn present(&mut self) {
-        self.window.backbuffer_fill(&utils::arr32_to_8(&self.fb));
-        self.window.swap();
-
-        while self.window.is_running() {
-            thread::sleep(time::Duration::from_secs(1));
-        }
     }
 }
