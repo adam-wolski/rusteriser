@@ -5,15 +5,16 @@ use utils;
 
 
 /// Returns barycentric coordinates of point `point` in triangle `tri`.
-/// Triangle vertices positions are taken as Vector3 even though the function operates only in 
+/// Triangle vertices positions are taken as Vector3 even though the function operates only in
 /// 2 dimensions for compatibility with rendering loops.
 pub fn barycentric(point: Vector2<f32>, tri: &[Vector3<f32>]) -> Option<Vector3<f32>> {
-    let u: Vector3<f32> = Vector3::new(tri[2].x - tri[0].x,
-                                       tri[1].x - tri[0].x,
-                                       tri[0].x - point.x)
-                              .cross(Vector3::new(tri[2].y - tri[0].y,
-                                                  tri[1].y - tri[0].y,
-                                                  tri[0].y - point.y));
+    let u: Vector3<f32> =
+        Vector3::new(tri[2].x - tri[0].x, tri[1].x - tri[0].x, tri[0].x - point.x)
+            .cross(Vector3::new(
+                tri[2].y - tri[0].y,
+                tri[1].y - tri[0].y,
+                tri[0].y - point.y,
+            ));
     if u.z.abs() < 1.0 {
         None
     } else {
@@ -62,14 +63,15 @@ fn naive_point_in_triangle(point: (usize, usize), triangle: &[Vector2<u32>]) -> 
 const EPSILON: f32 = 0.01;
 const EPSILON_SQUARE: f32 = EPSILON * EPSILON;
 
-fn point_in_triangle_bounding_box(x1: f32,
-                                  y1: f32,
-                                  x2: f32,
-                                  y2: f32,
-                                  x3: f32,
-                                  y3: f32,
-                                  point: (f32, f32))
-                                  -> bool {
+fn point_in_triangle_bounding_box(
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    x3: f32,
+    y3: f32,
+    point: (f32, f32),
+) -> bool {
     let x = point.0;
     let y = point.1;
     let x_min: f32 = x1.min(x2.min(x3)) - EPSILON;
@@ -149,10 +151,12 @@ fn test_point_in_triangle() {
 
 
 /// Draw triangle from given vertex positions.
-pub fn draw(triangle: &[Vector2<u32>],
-            color: color::Color,
-            mut buffer: &mut [u32],
-            buffer_width: usize) {
+pub fn draw(
+    triangle: &[Vector2<u32>],
+    color: color::Color,
+    buffer: &mut [u32],
+    buffer_width: usize,
+) {
 
     let (bb_min_x, bb_min_y, bb_max_x, bb_max_y) = bounding_box(triangle);
 
@@ -194,8 +198,10 @@ impl<'a> Iterator for TriangleIterator<'a> {
             return None;
         }
         self.y += 1;
-        Some(line::LineIterator::new(self.bb_min_x, self.y, self.bb_max_x, self.y)
-                 .filter(|p| point_in_triangle(*p, self.triangle))
-                 .collect())
+        Some(
+            line::LineIterator::new(self.bb_min_x, self.y, self.bb_max_x, self.y)
+                .filter(|p| point_in_triangle(*p, self.triangle))
+                .collect(),
+        )
     }
 }

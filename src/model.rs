@@ -58,15 +58,20 @@ impl Model {
 
             for m in 0..3 {
                 face.verts.push(Vertex {
-                    pos: Vector3::<f32>::new(mesh.positions[mesh.indices[i + m] as usize * 3],
-                                             mesh.positions[mesh.indices[i + m] as usize * 3 + 1],
-                                             mesh.positions[mesh.indices[i + m] as usize * 3 + 2]),
-                    normal: Vector3::<f32>::new(mesh.normals[mesh.indices[i + m] as usize * 3],
-                                                mesh.normals[mesh.indices[i + m] as usize * 3 + 1],
-                                                mesh.normals[mesh.indices[i + m] as usize * 3 + 2]),
-                    texcoord: Vector2::<f32>::new(mesh.texcoords[mesh.indices[i + m] as usize * 2],
-                                                  mesh.texcoords[mesh.indices[i + m] as usize * 2 +
-                                                                 1]),
+                    pos: Vector3::<f32>::new(
+                        mesh.positions[mesh.indices[i + m] as usize * 3],
+                        mesh.positions[mesh.indices[i + m] as usize * 3 + 1],
+                        mesh.positions[mesh.indices[i + m] as usize * 3 + 2],
+                    ),
+                    normal: Vector3::<f32>::new(
+                        mesh.normals[mesh.indices[i + m] as usize * 3],
+                        mesh.normals[mesh.indices[i + m] as usize * 3 + 1],
+                        mesh.normals[mesh.indices[i + m] as usize * 3 + 2],
+                    ),
+                    texcoord: Vector2::<f32>::new(
+                        mesh.texcoords[mesh.indices[i + m] as usize * 2],
+                        mesh.texcoords[mesh.indices[i + m] as usize * 2 + 1],
+                    ),
                 });
             }
             faces.push(face);

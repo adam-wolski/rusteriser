@@ -24,13 +24,12 @@ impl<'a> Window<'a> {
         let window = video.window(title, width, height).build().unwrap();
         let renderer = window.renderer().build().unwrap();
         // Create texture that will be used as a buffer.
-        let bt = renderer.create_texture_static(sdl2::pixels::PixelFormatEnum::ARGB8888,
-                                                width,
-                                                height)
-                         .unwrap();
+        let bt = renderer
+            .create_texture_static(sdl2::pixels::PixelFormatEnum::ARGB8888, width, height)
+            .unwrap();
         // Backbuffer has the same amount of pixels as window, we store data as u8 for
         // compatibility with sdl_texture so we multiply that by 4 to get ARGB8 format.
-        let backbuffer: Vec<u8> = vec!(0; (width * height * 4) as usize);
+        let backbuffer: Vec<u8> = vec![0; (width * height * 4) as usize];
         Window {
             context: context,
             renderer: renderer,
@@ -44,9 +43,7 @@ impl<'a> Window<'a> {
     /// Fill backbuffer with given data.
     pub fn backbuffer_fill(&mut self, data: &[u8]) {
         let max = self.backbuffer.capacity();
-        for (i, v) in data.into_iter()
-                          .enumerate()
-                          .take_while(|&(i, _)| i < max) {
+        for (i, v) in data.into_iter().enumerate().take_while(|&(i, _)| i < max) {
             self.backbuffer[i] = *v;
         }
     }
@@ -72,7 +69,7 @@ impl<'a> Window<'a> {
         for event in event_pump.poll_iter() {
             use sdl2::event::Event;
             running = match event {
-                Event::Quit {..} => false,
+                Event::Quit { .. } => false,
                 _ => true,
             };
             if !running {

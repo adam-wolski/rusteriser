@@ -86,20 +86,25 @@ impl Default for PSInput {
 
 
 /// Construct View matrix which transforms from world space to view space.
-pub fn view_matrix(camera: Vector3<f32>,
-                   camera_target: Vector3<f32>,
-                   up: Vector3<f32>)
-                   -> Matrix4<f32> {
+pub fn view_matrix(
+    camera: Vector3<f32>,
+    camera_target: Vector3<f32>,
+    up: Vector3<f32>,
+) -> Matrix4<f32> {
     let z_axis = (camera - camera_target).normalize();
     let x_axis = (up.cross(z_axis)).normalize();
     let y_axis = z_axis.cross(x_axis);
-    Matrix4::from_cols(Vector4::new(x_axis.x, y_axis.x, z_axis.x, 0.0),
-                       Vector4::new(x_axis.y, y_axis.y, z_axis.y, 0.0),
-                       Vector4::new(x_axis.z, y_axis.z, z_axis.z, 0.0),
-                       Vector4::new(-x_axis.dot(camera),
-                                    -y_axis.dot(camera),
-                                    -z_axis.dot(camera),
-                                    1.0))
+    Matrix4::from_cols(
+        Vector4::new(x_axis.x, y_axis.x, z_axis.x, 0.0),
+        Vector4::new(x_axis.y, y_axis.y, z_axis.y, 0.0),
+        Vector4::new(x_axis.z, y_axis.z, z_axis.z, 0.0),
+        Vector4::new(
+            -x_axis.dot(camera),
+            -y_axis.dot(camera),
+            -z_axis.dot(camera),
+            1.0,
+        ),
+    )
 }
 
 pub fn projection_matrix(fovy: f32) -> Matrix4<f32> {
@@ -115,10 +120,11 @@ pub fn projection_matrix(fovy: f32) -> Matrix4<f32> {
 }
 
 /// Construct viewport transformation matrix which translates ndc to screen/window coordinates.
-pub fn viewport_matrix(window_dimensions: (u32, u32),
-                       clip_near: f32,
-                       clip_far: f32)
-                       -> Matrix4<f32> {
+pub fn viewport_matrix(
+    window_dimensions: (u32, u32),
+    clip_near: f32,
+    clip_far: f32,
+) -> Matrix4<f32> {
     let mut viewport: Matrix4<f32> = Matrix4::identity();
     let (window_width, window_height) = window_dimensions;
     viewport[0][0] = (window_width - 1) as f32 / 2.0;
@@ -160,14 +166,16 @@ impl<'a> Gl<'a> {
         }
     }
 
-    pub fn draw<V, P>(&mut self,
-                      model: &model::Model,
-                      vertex_shader: V,
-                      vertex_shader_input: VSInput,
-                      pixel_shader: P,
-                      pixel_shader_input: PSInput)
-        where V: Fn(VSInput) -> VSOutput + Send + Copy + 'static,
-              P: Fn(PSInput) -> Vector4<f32> + Send + Copy + 'static
+    pub fn draw<V, P>(
+        &mut self,
+        model: &model::Model,
+        vertex_shader: V,
+        vertex_shader_input: VSInput,
+        pixel_shader: P,
+        pixel_shader_input: PSInput,
+    ) where
+        V: Fn(VSInput) -> VSOutput + Send + Copy + 'static,
+        P: Fn(PSInput) -> Vector4<f32> + Send + Copy + 'static,
     {
 
         let viewport: Matrix4<f32> = viewport_matrix(self.window.dimensions(), CLIP_NEAR, CLIP_FAR);
@@ -197,10 +205,12 @@ impl<'a> Gl<'a> {
                     vs_input.texcoord = vertex.texcoord;
                     let vs_out: VSOutput = vertex_shader(vs_input);
                     let vs_pos = vs_out.position;
-                    let ndc_v = Vector4::<f32>::new(vs_pos.x / vs_pos.w,
-                                                    vs_pos.y / vs_pos.w,
-                                                    vs_pos.z / vs_pos.w,
-                                                    1.0);
+                    let ndc_v = Vector4::<f32>::new(
+                        vs_pos.x / vs_pos.w,
+                        vs_pos.y / vs_pos.w,
+                        vs_pos.z / vs_pos.w,
+                        1.0,
+                    );
                     let s_s_v = viewport * ndc_v;
                     let mut v3: Vector3<f32> = s_s_v.truncate();
                     v3.x = v3.x.round();
@@ -214,15 +224,18 @@ impl<'a> Gl<'a> {
                 let triangle = triangle::TriangleIterator::new(&face_2d);
                 for line in triangle {
                     for point in line {
-                        let bary = match triangle::barycentric(Vector2::new(point.0 as f32,
-                                                                            point.1 as f32),
-                                                               &face_ss) {
+                        let bary = match triangle::barycentric(
+                            Vector2::new(point.0 as f32, point.1 as f32),
+                            &face_ss,
+                        ) {
                             Some(b) => b,
                             None => continue,
                         };
                         result.bi.push(utils::xy(point.0, point.1, fb_width));
-                        result.zbv.push(face_ss[0].z * bary.x + face_ss[1].z * bary.y +
-                                        face_ss[2].z * bary.z);
+                        result.zbv.push(
+                            face_ss[0].z * bary.x + face_ss[1].z * bary.y +
+                                face_ss[2].z * bary.z,
+                        );
 
                         let texcoord = utils::vector2_interpolate(&texcoords, &bary);
                         let normal = utils::vector3_interpolate(&normals, &bary);

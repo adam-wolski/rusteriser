@@ -6,28 +6,22 @@ use utils;
 
 
 /// Draw line using Bresenham algorithm.
-pub fn draw(x0: u32,
-            y0: u32,
-            x1: u32,
-            y1: u32,
-            color: color::Color,
-            buffer: &mut [u32],
-            buffer_width: usize) {
+pub fn draw(
+    x0: u32,
+    y0: u32,
+    x1: u32,
+    y1: u32,
+    color: color::Color,
+    buffer: &mut [u32],
+    buffer_width: usize,
+) {
 
     // Values of current point in line.
     let mut v0 = y0 as i32;
     let mut v1 = x0 as i32;
 
-    let mut dir0: i32 = if y0 > y1 {
-        -1
-    } else {
-        1
-    };
-    let mut dir1: i32 = if x0 > x1 {
-        -1
-    } else {
-        1
-    };
+    let mut dir0: i32 = if y0 > y1 { -1 } else { 1 };
+    let mut dir1: i32 = if x0 > x1 { -1 } else { 1 };
 
     let mut d0 = if x1 > x0 {
         x1 as i32 - x0 as i32
@@ -95,16 +89,8 @@ impl LineIterator {
         let mut v0 = y0 as i32;
         let mut v1 = x0 as i32;
 
-        let mut dir0: i32 = if y0 > y1 {
-            -1
-        } else {
-            1
-        };
-        let mut dir1: i32 = if x0 > x1 {
-            -1
-        } else {
-            1
-        };
+        let mut dir0: i32 = if y0 > y1 { -1 } else { 1 };
+        let mut dir1: i32 = if x0 > x1 { -1 } else { 1 };
 
         let mut d0 = if x1 > x0 {
             x1 as i32 - x0 as i32

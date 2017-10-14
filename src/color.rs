@@ -5,29 +5,35 @@ use utils;
 
 /// Represent color values as 0.0 - 1.0 ranges. For (u8, u8, u8, u8) tuple.
 pub fn tup8_as_ranges(clr: (u8, u8, u8, u8)) -> (f32, f32, f32, f32) {
-    (clr.0 as f32 / 255.0,
-     clr.1 as f32 / 255.0,
-     clr.2 as f32 / 255.0,
-     clr.3 as f32 / 255.0)
+    (
+        clr.0 as f32 / 255.0,
+        clr.1 as f32 / 255.0,
+        clr.2 as f32 / 255.0,
+        clr.3 as f32 / 255.0,
+    )
 }
 
 /// Represent color as u8 values.
 /// Made consistent with usage in shaders, where we return Vec4 instead of tuple.
 pub fn v4_as_values(clr: Vector4<f32>) -> (u8, u8, u8, u8) {
-    ((clr.x * 255.0).round().floor() as u8,
-     (clr.y * 255.0).round().floor() as u8,
-     (clr.z * 255.0).round().floor() as u8,
-     (clr.w * 255.0).round().floor() as u8)
+    (
+        (clr.x * 255.0).round().floor() as u8,
+        (clr.y * 255.0).round().floor() as u8,
+        (clr.z * 255.0).round().floor() as u8,
+        (clr.w * 255.0).round().floor() as u8,
+    )
 }
 
 /// Represent color as u32 value.
 /// Made consistent with usage in shaders, where we return Vec4 instead of tuple.
 /// Assumes BGRA order of colors.
 pub fn v4_as_value(clr: Vector4<f32>) -> u32 {
-    let clr_u8 = ((clr.w * 255.0).round().floor() as u8,
-                  (clr.x * 255.0).round().floor() as u8,
-                  (clr.y * 255.0).round().floor() as u8,
-                  (clr.z * 255.0).round().floor() as u8);
+    let clr_u8 = (
+        (clr.w * 255.0).round().floor() as u8,
+        (clr.x * 255.0).round().floor() as u8,
+        (clr.y * 255.0).round().floor() as u8,
+        (clr.z * 255.0).round().floor() as u8,
+    );
     utils::tup8_to_32(clr_u8)
 }
 

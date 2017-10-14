@@ -1,6 +1,4 @@
 #![feature(test)]
-#![feature(plugin)]
-#![plugin(clippy)]
 
 #[macro_use]
 extern crate log;
@@ -9,8 +7,8 @@ extern crate sdl2;
 extern crate tobj;
 extern crate cgmath;
 extern crate image;
-extern crate test;
 extern crate rand;
+extern crate test;
 
 
 pub mod window;
@@ -59,11 +57,13 @@ fn main() {
     ps_in.light_pos = light_pos;
     ps_in.cam_dir = camera - camera_target;
 
-    graphics.draw(&model,
-                  shaders::simple_vertex,
-                  vs_in,
-                  shaders::simple_pixel,
-                  ps_in);
+    graphics.draw(
+        &model,
+        shaders::simple_vertex,
+        vs_in,
+        shaders::simple_pixel,
+        ps_in,
+    );
 
     graphics.save_framebuffer_as_image(Path::new("./test_output/test.png"));
     graphics.present();
@@ -94,21 +94,27 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
-                                                            face.verts[i % 3].pos.y,
-                                                            WINDOW_WIDTH,
-                                                            WINDOW_HEIGHT);
-                let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
-                                                            face.verts[(i + 1) % 3].pos.y,
-                                                            WINDOW_WIDTH,
-                                                            WINDOW_HEIGHT);
+                let (x0, y0) = utils::screen_to_image_space(
+                    face.verts[i % 3].pos.x,
+                    face.verts[i % 3].pos.y,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                );
+                let (x1, y1) = utils::screen_to_image_space(
+                    face.verts[(i + 1) % 3].pos.x,
+                    face.verts[(i + 1) % 3].pos.y,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                );
                 line::draw(x0, y0, x1, y1, color, &mut fb, fb_width);
             }
         }
-        utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
-                                    &fb,
-                                    WINDOW_WIDTH,
-                                    WINDOW_HEIGHT);
+        utils::save_buffer_as_image(
+            Path::new("./test_output/test_lines_iter.png"),
+            &fb,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        );
     }
 
     #[test]
@@ -120,24 +126,30 @@ mod tests {
         let color = color::Color::red();
         for face in &testmodel.faces {
             for i in 0..3 {
-                let (x0, y0) = utils::screen_to_image_space(face.verts[i % 3].pos.x,
-                                                            face.verts[i % 3].pos.y,
-                                                            WINDOW_WIDTH,
-                                                            WINDOW_HEIGHT);
-                let (x1, y1) = utils::screen_to_image_space(face.verts[(i + 1) % 3].pos.x,
-                                                            face.verts[(i + 1) % 3].pos.y,
-                                                            WINDOW_WIDTH,
-                                                            WINDOW_HEIGHT);
+                let (x0, y0) = utils::screen_to_image_space(
+                    face.verts[i % 3].pos.x,
+                    face.verts[i % 3].pos.y,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                );
+                let (x1, y1) = utils::screen_to_image_space(
+                    face.verts[(i + 1) % 3].pos.x,
+                    face.verts[(i + 1) % 3].pos.y,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                );
                 let line = line::LineIterator::new(x0, y0, x1, y1);
                 for point in line {
                     fb[utils::xy(point.0, point.1, fb_width)] = color.bgra();
                 }
             }
         }
-        utils::save_buffer_as_image(Path::new("./test_output/test_lines_iter.png"),
-                                    &fb,
-                                    WINDOW_WIDTH,
-                                    WINDOW_HEIGHT);
+        utils::save_buffer_as_image(
+            Path::new("./test_output/test_lines_iter.png"),
+            &fb,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        );
     }
 
     #[bench]
@@ -145,7 +157,9 @@ mod tests {
         let mut fb: Vec<u32> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT) as usize];
         let fb_width = WINDOW_WIDTH as usize;
         let color = color::Color::red();
-        b.iter(|| line::draw(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, color, &mut fb, fb_width))
+        b.iter(|| {
+            line::draw(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, color, &mut fb, fb_width)
+        })
     }
 
     #[bench]
@@ -171,10 +185,12 @@ mod tests {
         tri.push(Vector2::<u32>::new(0, WINDOW_HEIGHT));
         tri.push(Vector2::<u32>::new(WINDOW_WIDTH, WINDOW_HEIGHT));
         b.iter(|| triangle::draw(&tri, color, &mut fb, fb_width));
-        utils::save_buffer_as_image(Path::new("./test_output/bench_triangle.png"),
-                                    &fb,
-                                    WINDOW_WIDTH,
-                                    WINDOW_HEIGHT);
+        utils::save_buffer_as_image(
+            Path::new("./test_output/bench_triangle.png"),
+            &fb,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        );
     }
 
     #[bench]
@@ -195,10 +211,12 @@ mod tests {
                 }
             }
         });
-        utils::save_buffer_as_image(Path::new("./test_output/bench_triangle_iter.png"),
-                                    &fb,
-                                    WINDOW_WIDTH,
-                                    WINDOW_HEIGHT);
+        utils::save_buffer_as_image(
+            Path::new("./test_output/bench_triangle_iter.png"),
+            &fb,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        );
     }
 
     #[test]
@@ -218,12 +236,12 @@ mod tests {
         let head_model = model::Model::load(head_modelpath).unwrap();
 
         let head_diffuse_image = image::open("./content/african_head/african_head_diffuse.tga")
-                                     .unwrap();
+            .unwrap();
         let head_diffuse_tex = sync::Arc::new(head_diffuse_image);
         let head_normals_image = image::open("./content/african_head/african_head_nm.tga").unwrap();
         let head_normals_tex = sync::Arc::new(head_normals_image);
         let head_specular_image = image::open("./content/african_head/african_head_spec.tga")
-                                      .unwrap();
+            .unwrap();
         let head_specular_tex = sync::Arc::new(head_specular_image);
 
         let mut vs_in: gl::VSInput = gl::VSInput::default();
@@ -240,26 +258,30 @@ mod tests {
         ps_in.cam_dir = camera - camera_target;
 
         b.iter(|| {
-            graphics.draw(&head_model,
-                          shaders::simple_vertex,
-                          vs_in,
-                          shaders::spec_pixel,
-                          ps_in.clone());
+            graphics.draw(
+                &head_model,
+                shaders::simple_vertex,
+                vs_in,
+                shaders::spec_pixel,
+                ps_in.clone(),
+            );
         });
 
         let ei_modelpath = Path::new("./content/african_head/african_head_eye_inner.obj");
         let ei_model = model::Model::load(ei_modelpath).unwrap();
 
-        let ei_diffuse_image = image::open("./content/african_head/african_head_eye_inner_diffuse\
-                                            2.tga")
-                                   .unwrap();
+        let ei_diffuse_image = image::open(
+            "./content/african_head/african_head_eye_inner_diffuse\
+                                            2.tga",
+        ).unwrap();
         let ei_diffuse_tex = sync::Arc::new(ei_diffuse_image);
         let ei_normals_image = image::open("./content/african_head/african_head_eye_inner_nm.tga")
-                                   .unwrap();
+            .unwrap();
         let ei_normals_tex = sync::Arc::new(ei_normals_image);
-        let ei_specular_image = image::open("./content/african_head/african_head_eye_inner_spec.\
-                                             tga")
-                                    .unwrap();
+        let ei_specular_image = image::open(
+            "./content/african_head/african_head_eye_inner_spec.\
+                                             tga",
+        ).unwrap();
         let ei_specular_tex = sync::Arc::new(ei_specular_image);
 
         ps_in.textures.clear();
@@ -267,11 +289,13 @@ mod tests {
         ps_in.textures.push(ei_normals_tex);
         ps_in.textures.push(ei_specular_tex);
 
-        graphics.draw(&ei_model,
-                      shaders::simple_vertex,
-                      vs_in,
-                      shaders::spec_pixel,
-                      ps_in);
+        graphics.draw(
+            &ei_model,
+            shaders::simple_vertex,
+            vs_in,
+            shaders::spec_pixel,
+            ps_in,
+        );
 
         graphics.save_framebuffer_as_image(Path::new("./test_output/test_head.png"));
     }

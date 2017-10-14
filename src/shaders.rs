@@ -34,9 +34,11 @@ pub fn spec_pixel(inputs: gl::PSInput) -> Vector4<f32> {
     let normals_tex = utils::sample(&inputs.textures[1], texcoord).truncate();
     let specular_tex = utils::sample(&inputs.textures[2], texcoord).truncate();
 
-    let nrm: Vector3<f32> = Vector3::new(normal.x * normals_tex.x,
-                                         normal.y * normals_tex.y,
-                                         normal.z * normals_tex.z);
+    let nrm: Vector3<f32> = Vector3::new(
+        normal.x * normals_tex.x,
+        normal.y * normals_tex.y,
+        normal.z * normals_tex.z,
+    );
 
     let n = nrm.normalize();
     let l = light_dir.normalize();
